@@ -1,9 +1,12 @@
 #include <stdio.h>
+#include <iostream>
 #include <time.h>
 #include <sys/time.h>
-#define ROWS 1024
-#define COLS 1024
-__device__ int parentIdx[ROWS];
+using namespace std;
+//#define ROWS 1024
+//#define COLS 1024
+__device__ int parentIdx[1024];
+
 __global__ void childKernel(int* A, int *B, int *C, int parentIdxVar)
 {
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -27,22 +30,23 @@ __global__ void singleKernel(int* A, int *B, int *C, int rows, int cols)
 			C[idx*cols+i] = A[idx*cols+i]+B[idx*cols+i];
 	}
 }
-void printOutput(int *A)
+void printOutput(int *A, int rows, int cols)
 {
-	for(int i=0; i < ROWS; i++)
+	for(int i=0; i < rows; i++)
 	{
-		for(int j=0; j < COLS; j++){
-			printf("%d ", A[i*COLS+j]);
+		for(int j=0; j < cols; j++){
+			printf("%d ", A[i*cols+j]);
 		}
 		printf("\n");
 	}
 }
-bool check(int *c1, int *c2){
+bool check(int *c1, int *c2, int rows, int cols){
+	
 	bool same = true;
-	for(int i=0; i < ROWS; i++)
+	for(int i=0; i < rows; i++)
 	{
-		for(int j=0; j < COLS; j++){
-			if(c1[i*COLS+j] != c2[i*COLS+j]){
+		for(int j=0; j < cols; j++){
+			if(c1[i*cols+j] != c2[i*cols+j]){
 				same = false;
 				break;
 			}				
@@ -62,6 +66,44 @@ double getWallTime(){
 }
 int main(int argC, char** argV)
 {
+	printf("NP - Characterization\n");
+	int ROWS = 1024, COLS = 1024;
+	for(int i=1; i<argC; i++)
+	{
+		if(strcmp(argV[i], "-size") == 0)
+		{
+			if(i+1 < argC)
+			{
+				ROWS = atoi(argV[i+1]);
+				COLS = ROWS;
+				printf("%d %d\n", ROWS, COLS);
+				if(ROWS < 1)
+				{
+					cerr << "Size must be greater than 0." << endl;
+					exit(1);
+				}
+			}
+			else
+			{
+				printf("Error...\n");
+				exit(1);
+			}
+		}
+		else if(strcmp(argV[i], "-h") == 0 || strcmp(argV[i], "--help") == 0)
+		{
+			cout << "Usage: " << argV[0] << " [OPTIONS] -size <number>" << endl;
+			cout << "  -h, --help            Display this information and exit." << endl;
+
+			exit(0);
+		}
+		else
+		{
+			cerr << "Did not recognize '" << argV[i] << "'. Try '" << argV[0]
+				<< " --help' for additional information." << endl;
+			exit(1);
+		}
+	}
+	
 	printf("NP Case2: [%d x %d]\n", ROWS, COLS);
 	int *a = (int*) malloc(ROWS*COLS*sizeof(int));
 	int *b = (int*) malloc(ROWS*COLS*sizeof(int));
@@ -74,7 +116,6 @@ int main(int argC, char** argV)
 			}
 		}
 	}
-	
 	// Sequential
 	double wallS0, wallS1;
 	wallS0 = getWallTime();
@@ -119,7 +160,7 @@ int main(int argC, char** argV)
 	//Retrieve results from device
 	cudaMemcpy(c, devC2, ROWS*COLS*sizeof(int), cudaMemcpyDeviceToHost);
 	//Verify correctness	
-	check(c, cHost) ? printf("Results are correct.\n") : printf("ERROR! Results are not the same");
+	check(c, cHost, ROWS, COLS) ? printf("Results are correct.\n") : printf("ERROR! Results are not the same");
 
 	// NP Case ****************************************************************
 	int *devC;
@@ -138,5 +179,5 @@ int main(int argC, char** argV)
 	//Retrieve results from device
 	cudaMemcpy(c, devC, ROWS*COLS*sizeof(int), cudaMemcpyDeviceToHost);
 	//Verify correctness	
-	check(c, cHost) ? printf("Results are correct.\n") : printf("ERROR! Results are not the same");
+	check(c, cHost, ROWS, COLS) ? printf("Results are correct.\n") : printf("ERROR! Results are not the same");
 }
