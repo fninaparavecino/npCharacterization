@@ -12,12 +12,12 @@ __global__ void parentKernel(int* A, int *B, int *C, int *npId, int rows, int co
 {
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 	if(A[idx*cols] == 1)
-	{	
+	{
 		npId[idx] = idx*cols;
 		if (cols > 1024){
 			childKernel<<<cols/1024, 1024>>>(A, B, C, npId[idx]);
 		}
-		else{			
+		else{
 			childKernel<<<1, cols>>>(A, B, C, npId[idx]);
 		}
 	}
@@ -31,7 +31,7 @@ __global__ void parentKernelSync(int* A, int *B, int *C, int *npId, int rows, in
 {
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 	if(A[idx*cols] == 1)
-	{	
+	{
 		npId[idx] = idx*cols;
 		if (cols > 1024){
 			childKernelSync<<<cols/1024, 1024>>>(A, B, C, npId[idx]);
@@ -40,8 +40,7 @@ __global__ void parentKernelSync(int* A, int *B, int *C, int *npId, int rows, in
 			//clock_t start, stop;
 			//__synchthreads();
 			//start = clock();
-			
-			childKernelSync<<<1, cols>>>(A, B, C, npId[idx]);			
+			childKernelSync<<<1, cols>>>(A, B, C, npId[idx]);
 			cudaDeviceSynchronize();
 			//stop = clock();
 			//if (idx== 0) //just for the first thread
@@ -53,7 +52,7 @@ __global__ void singleKernel(int* A, int *B, int *C, int rows, int cols)
 {
 	int idx = blockIdx.x *blockDim.x + threadIdx.x;
 	if(A[idx*cols] == 1)
-	{	
+	{
 		for(int i=0; i < cols; i++)
 			C[idx*cols+i] = A[idx*cols+i]+B[idx*cols+i];
 	}
@@ -69,7 +68,6 @@ void printOutput(int *A, int rows, int cols)
 	}
 }
 bool check(int *c1, int *c2, int rows, int cols){
-	
 	bool same = true;
 	for(int i=0; i < rows; i++)
 	{
@@ -78,7 +76,7 @@ bool check(int *c1, int *c2, int rows, int cols){
 				printf("ERROR...[%d %d] ", i, j);
 				same = false;
 				break;
-			}				
+			}
 		}
 		if (!same)
 			break;
@@ -93,11 +91,51 @@ double getWallTime(){
         }
         return (double)time.tv_sec + (double)time.tv_usec * .000001;
 }
+int getTotalCores(cudaDeviceProp devProp)
+{
+	int cores = 0;
+	int mp = devProp.multiProcessorCount;
+	int fixCores = 0;
+	switch (devProp.major){
+		case 2: // Fermi
+			if (devProp.minor == 1) cores = mp * 48;
+			else cores = mp * 32;
+      		break;
+     		case 3: // Kepler
+      			fixCores = 192;
+      			printf("Number of cores per SM:       %d\n", fixCores);
+      			cores = mp * fixCores;
+      			break;
+     		case 5: // Maxwell
+      			fixCores = 128;
+      			printf("Number of cores per SM:       %d\n", fixCores);
+			cores = mp * fixCores;
+      			break;
+     		case 6: // Pascal
+      			if (devProp.minor == 1) {
+				fixCores = 128;
+      				printf("Number of cores per SM:       %d\n",fixCores);
+				cores = mp * fixCores;
+			}
+      			else if (devProp.minor == 0){
+				fixCores = 64;
+      				printf("Number of cores per SM:       %d\n",fixCores);
+				cores = mp * fixCores;
+			}
+      			else printf("Unknown device type\n");
+      			break;
+     		default:
+      			printf("Unknown device type\n"); 
+      			break;
+	}
+	return cores;
+}
 void printDevProp(cudaDeviceProp devProp)
 {
-    printf("Major revision number:         %d\n",  devProp.major);
-    printf("Minor revision number:         %d\n",  devProp.minor);
     printf("Name:                          %s\n",  devProp.name);
+    printf("Capability:                   (%d, %d)\n",  devProp.major, devProp.minor);
+    printf("# SM:                          %d\n",  devProp.multiProcessorCount);
+    printf("Total Cores:                   %d\n", getTotalCores(devProp));
     printf("Clock rate:                    %d\n",  devProp.clockRate);
     printf("=================================\n");
     return;
@@ -105,21 +143,23 @@ void printDevProp(cudaDeviceProp devProp)
 
 int main(int argC, char** argV)
 {
+	
 	// Number of CUDA devices
 	int devCount;
 	cudaGetDeviceCount(&devCount);
 	printf("CUDA Device Query...\n");
 	printf("There are %d CUDA devices.\n", devCount);
- 
 	// Iterate through devices
+	int gpu = 0;
+	cudaDeviceProp devProp;
 	for (int i = 0; i < devCount; ++i)
 	{
 		// Get device properties
 		printf("\nCUDA Device #%d\n", i);
-		cudaDeviceProp devProp;
 		cudaGetDeviceProperties(&devProp, i);
 		printDevProp(devProp);
 	}
+	cudaSetDevice(gpu);
 	///*******************************
 	int mod = 2;
 	int ROWS = 1024, COLS = 1024;
@@ -130,7 +170,7 @@ int main(int argC, char** argV)
 			if(i+1 < argC)
 			{
 				ROWS = atoi(argV[i+1]);
-				COLS = ROWS;				
+				COLS = ROWS;
 				if(ROWS < 1)
 				{
 					cerr << "Size must be greater than 0." << endl;
@@ -160,6 +200,23 @@ int main(int argC, char** argV)
 				exit(1);
 			}
 		}
+		else if(strcmp(argV[i], "--gpu") == 0){
+                        if(i+1 < argC)
+                        {
+                                gpu = atoi(argV[i+1]);
+                                if(gpu < 0)
+                                {
+                                        cerr << "GPU index should be a positive index of the array of GPU." << endl;
+                                        exit(1);
+                                }
+                                break;
+                        }
+                        else
+                        {
+                                printf("Error...\n");
+                                exit(1);
+                        }
+                }
 		else if(strcmp(argV[i], "-h") == 0 || strcmp(argV[i], "--help") == 0)
 		{
 			cout << "Usage: " << argV[0] << " [OPTIONS] --size <number> --div <number>" << endl;
@@ -177,7 +234,9 @@ int main(int argC, char** argV)
 
 	printf("NP - Characterization: %d percentage of divergence\n", (100/mod));
 	printf("NP Case2: [%d x %d]\n", ROWS, COLS);
-	
+	cudaSetDevice(gpu);
+	cudaGetDeviceProperties(&devProp, gpu);
+	printf("GPU: %s\n", devProp.name);
 	int *a = (int*) malloc(ROWS*COLS*sizeof(int));
 	int *b = (int*) malloc(ROWS*COLS*sizeof(int));
 	int *c = (int*) malloc(ROWS*COLS*sizeof(int));
