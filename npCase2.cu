@@ -192,7 +192,6 @@ int main(int argC, char** argV)
 					cerr << "Divergence must be greater than 0." << endl;
 					exit(1);
 				}
-				break;
 			}
 			else
 			{
