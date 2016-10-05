@@ -3,58 +3,13 @@
 #include <time.h>
 #include <sys/time.h>
 using namespace std;
-__global__ void childKernel(int* A, int *B, int *C, int parentIdxVar)
-{
-	int idx = blockIdx.x * blockDim.x + threadIdx.x;
-	C[parentIdxVar+idx] = A[parentIdxVar+idx] + B[parentIdxVar+idx];
-}
-__global__ void parentKernel(int* A, int *B, int *C, int *npId, int rows, int cols)
-{
-	int idx = blockIdx.x * blockDim.x + threadIdx.x;
-	if(A[idx*cols] == 1)
-	{
-		npId[idx] = idx*cols;
-		if (cols > 1024){
-			childKernel<<<cols/1024, 1024>>>(A, B, C, npId[idx]);
-		}
-		else{
-			childKernel<<<1, cols>>>(A, B, C, npId[idx]);
-		}
-	}
-}
-__global__ void childKernelSync(int* A, int *B, int *C, int parentIdxVar)
-{
-	int idx = blockIdx.x * blockDim.x + threadIdx.x;
-	C[parentIdxVar+idx] = A[parentIdxVar+idx] + B[parentIdxVar+idx];
-}
-__global__ void parentKernelSync(int* A, int *B, int *C, int *npId, int rows, int cols)
-{
-	int idx = blockIdx.x * blockDim.x + threadIdx.x;
-	if(A[idx*cols] == 1)
-	{
-		npId[idx] = idx*cols;
-		if (cols > 1024){
-			childKernelSync<<<cols/1024, 1024>>>(A, B, C, npId[idx]);
-		}
-		else{
-			//clock_t start, stop;
-			//__synchthreads();
-			//start = clock();
-			childKernelSync<<<1, cols>>>(A, B, C, npId[idx]);
-			cudaDeviceSynchronize();
-			//stop = clock();
-			//if (idx== 0) //just for the first thread
-			//	printf("Number of clocks: %d... \n", (int)(stop-start));
-		}
-	}
-}
 __global__ void singleKernel(int* A, int *B, int *C, int rows, int cols)
 {
 	int idx = blockIdx.x *blockDim.x + threadIdx.x;
 	if(A[idx*cols] == 1)
 	{
 		for(int i=0; i < cols; i++)
-			C[idx*cols+i] = A[idx*cols+i]+B[idx*cols+i];
+			C[idx*cols + i] = A[idx*cols + i] + B[idx*cols + i];
 	}
 }
 void printOutput(int *A, int rows, int cols)
@@ -306,52 +261,4 @@ int main(int argC, char** argV)
 	cudaMemcpy(c, devC2, ROWS*COLS*sizeof(int), cudaMemcpyDeviceToHost);
 	//Verify correctness	
 	check(c, cHost, ROWS, COLS) ? printf("Results are correct.\n") : printf("Results are not correct.\n");
-
-	// NP Case ****************************************************************
-	int *devC, *devNpId;
-	int *cNp = (int*)malloc(ROWS*COLS*sizeof(int));
-	int *npId = (int*)malloc(ROWS*COLS*sizeof(int));
-	cudaMalloc((void**)&devC, ROWS*COLS*sizeof(int));
-	cudaMalloc((void**)&devNpId, ROWS*COLS*sizeof(int));
-	cudaMemcpy(devC, cNp, ROWS*COLS*sizeof(int), cudaMemcpyHostToDevice);
-	cudaMemcpy(devNpId, npId, ROWS*COLS*sizeof(int), cudaMemcpyHostToDevice);
-	cudaEventRecord(start, 0);
-	
-	parentKernel<<<blocks, threads>>>(devA, devB, devC, devNpId, ROWS, COLS);
-	cudaDeviceSynchronize();
-	cudaEventRecord(stop, 0);
-	cudaEventSynchronize(stop);
-	
-	//Display time
-	cudaEventElapsedTime(&time, start, stop);
-	printf("\tParallel NP Job time: %.2f ms\n", time);
-	
-	//Retrieve results from device
-	cudaMemcpy(cNp, devC, ROWS*COLS*sizeof(int), cudaMemcpyDeviceToHost);
-	//Verify correctness	
-	check(cNp, cHost, ROWS, COLS) ? printf("Results are correct.\n") : printf("Results are not correct.\n");
-	
-	// NP Sync Case ****************************************************************
-		int *devCSync;
-		int *cNpSync = (int*)malloc(ROWS*COLS*sizeof(int));
-		//int *npId = (int*)malloc(ROWS*COLS*sizeof(int));
-		cudaMalloc((void**)&devCSync, ROWS*COLS*sizeof(int));
-		//cudaMalloc((void**)&devNpId, ROWS*COLS*sizeof(int));
-		cudaMemcpy(devCSync, cNpSync, ROWS*COLS*sizeof(int), cudaMemcpyHostToDevice);
-		//cudaMemcpy(devNpId, npId, ROWS*COLS*sizeof(int), cudaMemcpyHostToDevice);
-		cudaEventRecord(start, 0);
-		
-		parentKernel<<<blocks, threads>>>(devA, devB, devCSync, devNpId, ROWS, COLS);
-		cudaDeviceSynchronize();
-		cudaEventRecord(stop, 0);
-		cudaEventSynchronize(stop);
-		
-		//Display time
-		cudaEventElapsedTime(&time, start, stop);
-		printf("\tParallel NP Sync Job time: %.2f ms\n", time);
-		
-		//Retrieve results from device
-		cudaMemcpy(cNpSync, devCSync, ROWS*COLS*sizeof(int), cudaMemcpyDeviceToHost);
-		//Verify correctness	
-		check(cNpSync, cHost, ROWS, COLS) ? printf("Results are correct.\n") : printf("Results are not correct.\n");
 }
