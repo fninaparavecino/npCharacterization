@@ -22,41 +22,6 @@ __global__ void parentKernel(int* A, int *B, int *C, int *npId, int rows, int co
 		}
 	}
 }
-__global__ void childKernelSync(int* A, int *B, int *C, int parentIdxVar)
-{
-	int idx = blockIdx.x * blockDim.x + threadIdx.x;
-	C[parentIdxVar+idx] = A[parentIdxVar+idx] + B[parentIdxVar+idx];
-}
-__global__ void parentKernelSync(int* A, int *B, int *C, int *npId, int rows, int cols)
-{
-	int idx = blockIdx.x * blockDim.x + threadIdx.x;
-	if(A[idx*cols] == 1)
-	{
-		npId[idx] = idx*cols;
-		if (cols > 1024){
-			childKernelSync<<<cols/1024, 1024>>>(A, B, C, npId[idx]);
-		}
-		else{
-			//clock_t start, stop;
-			//__synchthreads();
-			//start = clock();
-			childKernelSync<<<1, cols>>>(A, B, C, npId[idx]);
-			cudaDeviceSynchronize();
-			//stop = clock();
-			//if (idx== 0) //just for the first thread
-			//	printf("Number of clocks: %d... \n", (int)(stop-start));
-		}
-	}
-}
-__global__ void singleKernel(int* A, int *B, int *C, int rows, int cols)
-{
-	int idx = blockIdx.x *blockDim.x + threadIdx.x;
-	if(A[idx*cols] == 1)
-	{
-		for(int i=0; i < cols; i++)
-			C[idx*cols+i] = A[idx*cols+i]+B[idx*cols+i];
-	}
-}
 void printOutput(int *A, int rows, int cols)
 {
 	for(int i=0; i < rows; i++)
@@ -161,7 +126,7 @@ int main(int argC, char** argV)
 	}
 	cudaSetDevice(gpu);
 	///*******************************
-	float div = 50.0f;
+	int mod = 2;
 	int ROWS = 1024, COLS = 1024;
 	for(int i=1; i<argC; i=i+2)
 	{
@@ -183,11 +148,12 @@ int main(int argC, char** argV)
 				exit(1);
 			}
 		}
-		else if(strcmp(argV[i], "--div") == 0){
+		else if(strcmp(argV[i], "--div") == 0)
+		{
 			if(i+1 < argC)
 			{
-				div = atof(argV[i+1]);
-				if(div <= 0)
+				mod = 100/atoi(argV[i+1]);
+				if(mod <= 0)
 				{
 					cerr << "Divergence must be greater than 0." << endl;
 					exit(1);
@@ -231,7 +197,7 @@ int main(int argC, char** argV)
 		}
 	}
 
-	printf("NP - Characterization: %f percentage of divergence\n", div);
+	printf("NP - Characterization: %d percentage of divergence\n", (100/mod));
 	printf("NP Case2: [%d x %d]\n", ROWS, COLS);
 	cudaSetDevice(gpu);
 	cudaGetDeviceProperties(&devProp, gpu);
@@ -240,15 +206,16 @@ int main(int argC, char** argV)
 	int *b = (int*) malloc(ROWS*COLS*sizeof(int));
 	int *c = (int*) malloc(ROWS*COLS*sizeof(int));
 	int nroChildKernels = 0;
-		int rndValue = 0;
-		while (nroChildKernels < (ROWS*(div/100.0f))){
-			rndValue = rand()%ROWS;
-                        nroChildKernels++;
-                        for(int j=0; j<COLS; j++){
-                        	a[rndValue*COLS+j] = 1;
-                        	b[rndValue*COLS+j] = 2;
-                        }
-                }
+	for (int i=0; i<ROWS; i++){
+		if(i%mod == 0)
+			nroChildKernels++;
+		for(int j=0; j<COLS; j++){
+			if(i%mod == 0){
+				a[i*COLS+j] = 1;
+				b[i*COLS+j] = 2;
+			}
+		}
+	}
 	printf("Number of child kernels: %d\n", nroChildKernels);
 	// Sequential
 	double wallS0, wallS1;
@@ -277,11 +244,14 @@ int main(int argC, char** argV)
 	cudaMemcpy(devA, a, ROWS*COLS*sizeof(int), cudaMemcpyHostToDevice);
 	cudaMemcpy(devB, b, ROWS*COLS*sizeof(int), cudaMemcpyHostToDevice);
 		
-	// Single Kernel **********************************************************
-	int *devC2;
-	cudaMalloc((void**)&devC2, ROWS*COLS*sizeof(int));	
-	cudaMemcpy(devC2, c, ROWS*COLS*sizeof(int), cudaMemcpyHostToDevice);
-	cudaEventRecord(start, 0);
+	// NP Case ****************************************************************
+	int *devC, *devNpId;
+	int *cNp = (int*)malloc(ROWS*COLS*sizeof(int));
+	int *npId = (int*)malloc(ROWS*COLS*sizeof(int));
+	cudaMalloc((void**)&devC, ROWS*COLS*sizeof(int));
+	cudaMalloc((void**)&devNpId, ROWS*COLS*sizeof(int));
+	cudaMemcpy(devC, cNp, ROWS*COLS*sizeof(int), cudaMemcpyHostToDevice);
+	cudaMemcpy(devNpId, npId, ROWS*COLS*sizeof(int), cudaMemcpyHostToDevice);
 	dim3 threads, blocks;
 	if (ROWS >1024){
 		threads.x = 1024; threads.y = 1; threads.z = 1;
@@ -291,29 +261,7 @@ int main(int argC, char** argV)
 		threads.x = ROWS; threads.y = 1; threads.z = 1;
 		blocks.x = 1; blocks.y = 1; blocks.z = 1; 
 	}
-	
-	singleKernel<<<blocks,threads>>>(devA, devB, devC2, ROWS, COLS);
-	cudaDeviceSynchronize();
-	cudaEventRecord(stop, 0);
-	cudaEventSynchronize(stop);
-	
-	//Display time
-	cudaEventElapsedTime(&time, start, stop);
-	printf("\tParallel Job time single kernel: %.2f ms\n", time);
-	
-	//Retrieve results from device
-	cudaMemcpy(c, devC2, ROWS*COLS*sizeof(int), cudaMemcpyDeviceToHost);
-	//Verify correctness	
-	check(c, cHost, ROWS, COLS) ? printf("Results are correct.\n") : printf("Results are not correct.\n");
-
-	// NP Case ****************************************************************
-	int *devC, *devNpId;
-	int *cNp = (int*)malloc(ROWS*COLS*sizeof(int));
-	int *npId = (int*)malloc(ROWS*COLS*sizeof(int));
-	cudaMalloc((void**)&devC, ROWS*COLS*sizeof(int));
-	cudaMalloc((void**)&devNpId, ROWS*COLS*sizeof(int));
-	cudaMemcpy(devC, cNp, ROWS*COLS*sizeof(int), cudaMemcpyHostToDevice);
-	cudaMemcpy(devNpId, npId, ROWS*COLS*sizeof(int), cudaMemcpyHostToDevice);
+		
 	cudaEventRecord(start, 0);
 	
 	parentKernel<<<blocks, threads>>>(devA, devB, devC, devNpId, ROWS, COLS);
@@ -329,28 +277,4 @@ int main(int argC, char** argV)
 	cudaMemcpy(cNp, devC, ROWS*COLS*sizeof(int), cudaMemcpyDeviceToHost);
 	//Verify correctness	
 	check(cNp, cHost, ROWS, COLS) ? printf("Results are correct.\n") : printf("Results are not correct.\n");
-	
-	// NP Sync Case ****************************************************************
-		int *devCSync;
-		int *cNpSync = (int*)malloc(ROWS*COLS*sizeof(int));
-		//int *npId = (int*)malloc(ROWS*COLS*sizeof(int));
-		cudaMalloc((void**)&devCSync, ROWS*COLS*sizeof(int));
-		//cudaMalloc((void**)&devNpId, ROWS*COLS*sizeof(int));
-		cudaMemcpy(devCSync, cNpSync, ROWS*COLS*sizeof(int), cudaMemcpyHostToDevice);
-		//cudaMemcpy(devNpId, npId, ROWS*COLS*sizeof(int), cudaMemcpyHostToDevice);
-		cudaEventRecord(start, 0);
-		
-		parentKernel<<<blocks, threads>>>(devA, devB, devCSync, devNpId, ROWS, COLS);
-		cudaDeviceSynchronize();
-		cudaEventRecord(stop, 0);
-		cudaEventSynchronize(stop);
-		
-		//Display time
-		cudaEventElapsedTime(&time, start, stop);
-		printf("\tParallel NP Sync Job time: %.2f ms\n", time);
-		
-		//Retrieve results from device
-		cudaMemcpy(cNpSync, devCSync, ROWS*COLS*sizeof(int), cudaMemcpyDeviceToHost);
-		//Verify correctness	
-		check(cNpSync, cHost, ROWS, COLS) ? printf("Results are correct.\n") : printf("Results are not correct.\n");
 }
