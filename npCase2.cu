@@ -340,7 +340,7 @@ int main(int argC, char** argV)
 		//cudaMemcpy(devNpId, npId, ROWS*COLS*sizeof(int), cudaMemcpyHostToDevice);
 		cudaEventRecord(start, 0);
 		
-		parentKernel<<<blocks, threads>>>(devA, devB, devCSync, devNpId, ROWS, COLS);
+		parentKernelSync<<<blocks, threads>>>(devA, devB, devCSync, devNpId, ROWS, COLS);
 		cudaDeviceSynchronize();
 		cudaEventRecord(stop, 0);
 		cudaEventSynchronize(stop);
