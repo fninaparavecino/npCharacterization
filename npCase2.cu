@@ -1,3 +1,12 @@
+/*******************
+ * npCase2: Selective Matrix Addition using nested parallelism. There are two 
+ * 			version of the same logic. One with Synchronization of nested calls,
+ * 			and the other one with Synchronization in order to measure the 
+ * 			cudaDeviceSync. Also, there is the sequential implementation to 
+ * 			check correctness of results.
+ * Author : Fanny Nina-Paravecino
+ * Date   : October 2016
+ */
 #include <stdio.h>
 #include <iostream>
 #include <time.h>
@@ -232,7 +241,7 @@ int main(int argC, char** argV)
 	}
 
 	printf("NP - Characterization: %f percentage of divergence\n", div);
-	printf("NP Case2: [%d x %d]\n", ROWS, COLS);
+	printf("NP Case2 Matrix Addition: [%d x %d]\n", ROWS, COLS);
 	cudaSetDevice(gpu);
 	cudaGetDeviceProperties(&devProp, gpu);
 	printf("GPU: %s\n", devProp.name);
@@ -281,7 +290,7 @@ int main(int argC, char** argV)
 	int *devC2;
 	cudaMalloc((void**)&devC2, ROWS*COLS*sizeof(int));	
 	cudaMemcpy(devC2, c, ROWS*COLS*sizeof(int), cudaMemcpyHostToDevice);
-	cudaEventRecord(start, 0);
+	
 	dim3 threads, blocks;
 	if (ROWS >1024){
 		threads.x = 1024; threads.y = 1; threads.z = 1;
@@ -292,6 +301,7 @@ int main(int argC, char** argV)
 		blocks.x = 1; blocks.y = 1; blocks.z = 1; 
 	}
 	
+	cudaEventRecord(start, 0);
 	singleKernel<<<blocks,threads>>>(devA, devB, devC2, ROWS, COLS);
 	cudaDeviceSynchronize();
 	cudaEventRecord(stop, 0);

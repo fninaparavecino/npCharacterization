@@ -1,3 +1,8 @@
+/*******************
+ * npCase3: Selective Matrix Addition without any nested kernel calls.
+ * Author : Fanny Nina-Paravecino
+ * Date   : October 2016
+ */
 #include <stdio.h>
 #include <iostream>
 #include <time.h>
@@ -187,7 +192,7 @@ int main(int argC, char** argV)
 	}
 
 	printf("NP - Characterization: %d percentage of divergence\n", (100/mod));
-	printf("NP Case2: [%d x %d]\n", ROWS, COLS);
+	printf("NP Case3 - Non NP Matrix Multiplication: [%d x %d]\n", ROWS, COLS);
 	cudaSetDevice(gpu);
 	cudaGetDeviceProperties(&devProp, gpu);
 	printf("GPU: %s\n", devProp.name);

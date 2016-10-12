@@ -1,3 +1,8 @@
+/*******************
+ * npCase1: Matrix Multiplication
+ * Author : Fanny Nina-Paravecino
+ * Date   : October 2016
+ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>

@@ -1,3 +1,8 @@
+/*******************
+ * npCase4: Selective Matrix Addition without Nested Parallelism.
+ * Author : Fanny Nina-Paravecino
+ * Date   : October 2016
+ */
 #include <stdio.h>
 #include <iostream>
 #include <time.h>
@@ -198,7 +203,7 @@ int main(int argC, char** argV)
 	}
 
 	printf("NP - Characterization: %d percentage of divergence\n", (100/mod));
-	printf("NP Case2: [%d x %d]\n", ROWS, COLS);
+	printf("NP Case4 - NP Matrix Addition : [%d x %d]\n", ROWS, COLS);
 	cudaSetDevice(gpu);
 	cudaGetDeviceProperties(&devProp, gpu);
 	printf("GPU: %s\n", devProp.name);
