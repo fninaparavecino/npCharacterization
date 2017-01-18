@@ -1,0 +1,18 @@
+CUDA Device Query...
+There are 1 CUDA devices.
+
+CUDA Device #0
+Name:                          GeForce GTX TITAN
+Capability:                   (3, 5)
+# SM:                          14
+Number of cores per SM:       192
+Total Cores:                   2688
+Clock rate:                    875500
+=================================
+NP - Characterization: 50 percentage of divergence
+NP Case2: [1024 x 1024]
+GPU: GeForce GTX TITAN
+Number of child kernels: 512
+	Sequential Job Time: 6.098986 ms
+	Parallel Job time single kernel: 1625.32 ms
+Results are correct.
