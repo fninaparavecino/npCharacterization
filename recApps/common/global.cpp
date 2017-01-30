@@ -54,8 +54,8 @@ int readInputDIMACS9()
             /* get edge value no */
             p = strtok(NULL, " ");
             edgeWeight = atoi(p);
-            //printf("%d %d %d\n", tailNode, headNode,edgeWeight);
-            adjacencyNodeList[tailNode].push_back(headNode);
+            //printf("%d %d %d\n", tailNode, headNode, edgeWeight);
+            adjacencyNodeList[tailNode].push_back(headNode);            
 			adjacencyWeightList[tailNode].push_back(edgeWeight);
         }
     }

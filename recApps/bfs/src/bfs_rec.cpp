@@ -108,8 +108,8 @@ void bfs_cpu(int *levelArray){
 		int node = workingSet.front();
 		workingSet.pop();
 		unsigned next_level = levelArray[node]+1;
-		
-		for(int edge=graph.vertexArray[node]; edge<graph.vertexArray[node+1];edge++){
+		printf("DEBUG vertexArray[%d] to %d \n", graph.vertexArray[node], graph.vertexArray[node+1]);
+		for(int edge = graph.vertexArray[node]; edge < graph.vertexArray[node+1]; edge++){
 			int neighbor=graph.edgeArray[edge];
 			if (levelArray[neighbor]==UNDEFINED || levelArray[neighbor]>next_level){
 				levelArray[neighbor]=next_level;
@@ -176,13 +176,14 @@ int main(int argc, char* argv[])
 	if (VERBOSE)
 		fprintf(stderr, "AdjList to CSR:\t\t%lf\n",end_time-time);
 
-/*	printf("%d\n", noNodeTotal);
+	/*
+	printf("%d\n", noNodeTotal);
 	for (int i=0; i<noNodeTotal; ++i) {
 		int num_edge = graph.vertexArray[i+1] - graph.vertexArray[i];
 		printf("%d ", num_edge);
 	}
-	printf("\n");
-*/	
+	printf("\n");*/
+	
 	//starts execution
 	printf("\n===MAIN=== :: [num_nodes,num_edges] = %u, %u\n", noNodeTotal, noEdgeTotal);
 
@@ -197,12 +198,12 @@ int main(int argc, char* argv[])
 	setArrays(noNodeTotal, levelArray_cpu, UNDEFINED);
 	levelArray_cpu[source] = 0;
 	bfs_cpu(levelArray_cpu);
-	
-	/*for (int i=0; i<noNodeTotal; ++i) {
+	/*
+	for (int i=0; i<noNodeTotal; ++i) {
 		//printf("%d ", levelArray_cpu[i]);
 		printf("%d ", graph.levelArray[i]);
-	} printf("\n");*/
-	
+	} printf("\n");
+	*/
 	validateArrays(noNodeTotal, graph.levelArray, levelArray_cpu, "GPU bfs rec");
 
 	

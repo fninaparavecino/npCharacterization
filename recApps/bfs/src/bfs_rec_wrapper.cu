@@ -84,6 +84,7 @@ void prepare_gpu()
 	cudaCheckError( __FILE__, __LINE__, cudaMalloc( (void**)&d_vertexArray, sizeof(int)*(noNodeTotal+1) ) );
 	cudaCheckError( __FILE__, __LINE__, cudaMalloc( (void**)&d_edgeArray, sizeof(int)*noEdgeTotal ) );
 	cudaCheckError( __FILE__, __LINE__, cudaMalloc( (void**)&d_levelArray, sizeof(int)*noNodeTotal ) );
+	printf("DEBUG levelArray : %d \n", noNodeTotal);
 	//cudaCheckError( __LINE__, cudaMalloc( (void**)&d_nonstop, sizeof(unsigned int) ) );
 	end_time = gettime_ms();
 	d_malloc_time += end_time - start_time;
@@ -122,7 +123,8 @@ void bfs_flat_gpu()
 	//level-based traversal
 	while (!queue_empty){
 		cudaCheckError(  __FILE__, __LINE__, cudaMemset( d_queue_empty, true, sizeof(bool)) );
-		bfs_kernel_flat<<<NUM_BLOCKS_FLAT, THREADS_PER_BLOCK_FLAT>>>(level,noNodeTotal, d_vertexArray, d_edgeArray, d_levelArray, d_queue_empty);
+		printf("Grid configuration gridxblocks, %d x %d\n", NUM_BLOCKS_FLAT, THREADS_PER_BLOCK_FLAT);
+		bfs_kernel_flat<<<1, 32>>>(level,noNodeTotal, d_vertexArray, d_edgeArray, d_levelArray, d_queue_empty);
 		cudaCheckError(  __FILE__, __LINE__, cudaGetLastError());
 		cudaCheckError(  __FILE__, __LINE__, cudaMemcpy( &queue_empty, d_queue_empty, sizeof(bool), cudaMemcpyDeviceToHost) );
 		level++;
