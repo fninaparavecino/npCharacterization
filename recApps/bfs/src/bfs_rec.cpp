@@ -37,7 +37,7 @@ void usage() {
 	fprintf(stderr, "    --device,-e <number>               select the device\n");
 }
 
-void print_conf() { 
+void print_conf() {
 	fprintf(stderr, "\nCONFIGURATION:\n");
 	if (config.graph_file) {
 		fprintf(stderr, "- Graph file: %s\n", config.graph_file);
@@ -95,27 +95,27 @@ int parse_arguments(int argc, char** argv) {
 		}
 		++i;
 	}
-	
+
 	return 1;
 }
 
 void bfs_cpu(int *levelArray){
 	levelArray[source]=0;
+
 	queue<int> workingSet;
 	workingSet.push(source);
-	
+
 	while(!workingSet.empty()){
 		int node = workingSet.front();
 		workingSet.pop();
 		unsigned next_level = levelArray[node]+1;
-		printf("DEBUG vertexArray[%d] to %d \n", graph.vertexArray[node], graph.vertexArray[node+1]);
 		for(int edge = graph.vertexArray[node]; edge < graph.vertexArray[node+1]; edge++){
-			int neighbor=graph.edgeArray[edge];
-			if (levelArray[neighbor]==UNDEFINED || levelArray[neighbor]>next_level){
-				levelArray[neighbor]=next_level;
+			int neighbor = graph.edgeArray[edge];
+			//printf("neighbor: %d\n", neighbor);
+			if (levelArray[neighbor] == UNDEFINED || levelArray[neighbor] > next_level){
+				levelArray[neighbor] = next_level;
 				workingSet.push(neighbor);
 			}
-		
 		}
 	}
 }
@@ -144,9 +144,9 @@ int main(int argc, char* argv[])
 {
 	init_conf();
 	if ( !parse_arguments(argc, argv) ) return 0;
-	
+
 	print_conf();
-	
+
 	if (config.graph_file!=NULL) {
 		fp = fopen(config.graph_file, "r");
 		if ( fp==NULL ) {
@@ -158,7 +158,6 @@ int main(int argc, char* argv[])
 		return 0;
 
 	double time, end_time;
-	
 	time = gettime();
 	switch(config.data_set_format) {
 		case 0: readInputDIMACS9(); break;
@@ -169,7 +168,7 @@ int main(int argc, char* argv[])
 	end_time = gettime();
 	if (VERBOSE)
 		fprintf(stderr, "Import graph:\t\t%lf\n",end_time-time);
-	
+
 	time = gettime();
 	convertCSR();
 	end_time = gettime();
@@ -183,7 +182,7 @@ int main(int argc, char* argv[])
 		printf("%d ", num_edge);
 	}
 	printf("\n");*/
-	
+
 	//starts execution
 	printf("\n===MAIN=== :: [num_nodes,num_edges] = %u, %u\n", noNodeTotal, noEdgeTotal);
 
@@ -198,22 +197,21 @@ int main(int argc, char* argv[])
 	setArrays(noNodeTotal, levelArray_cpu, UNDEFINED);
 	levelArray_cpu[source] = 0;
 	bfs_cpu(levelArray_cpu);
-	/*
-	for (int i=0; i<noNodeTotal; ++i) {
-		//printf("%d ", levelArray_cpu[i]);
-		printf("%d ", graph.levelArray[i]);
-	} printf("\n");
-	*/
+
+	// for (int i=0; i<noNodeTotal; ++i) {
+	// 	printf("%d ", levelArray_cpu[i]);
+	// 	printf("%d ", graph.levelArray[i]);
+	// } printf("\n");
+
 	validateArrays(noNodeTotal, graph.levelArray, levelArray_cpu, "GPU bfs rec");
 
-	
-    if (VERBOSE) {
+  if (VERBOSE) {
 		fprintf(stdout, "===MAIN=== :: CUDA runtime init:\t\t%.2lf ms.\n", init_time/N);
 		fprintf(stdout, "===MAIN=== :: CUDA device cudaMalloc:\t\t%.2lf ms.\n", d_malloc_time/N);
 		fprintf(stdout, "===MAIN=== :: CUDA H2D cudaMemcpy:\t\t%.2lf ms.\n", h2d_memcpy_time/N);
 		fprintf(stdout, "===MAIN=== :: CUDA kernel execution:\t\t%.2lf ms.\n", ker_exe_time/N);
 		fprintf(stdout, "===MAIN=== :: CUDA D2H cudaMemcpy:\t\t%.2lf ms.\n", d2h_memcpy_time/N);
-	}   
+	}
 
 	clear();
 	return 0;

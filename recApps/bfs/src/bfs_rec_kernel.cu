@@ -45,7 +45,7 @@ __global__ void bfs_kernel_flat(int level, int num_nodes, int *vertexArray, int 
 #endif
 	unsigned tid = threadIdx.x + blockDim.x * blockIdx.x;
 	for (int node = tid; node < num_nodes; node += blockDim.x * gridDim.x){
-		//printf("DEBUG node in gpu flat: %d \n", node);
+		printf("DEBUG node in gpu flat: %d \n", node);
 		if(node < num_nodes && levelArray[node] == level){
 			for (int edge=vertexArray[node]; edge<vertexArray[node+1]; edge++){
 				int neighbor=edgeArray[edge];
@@ -53,9 +53,9 @@ __global__ void bfs_kernel_flat(int level, int num_nodes, int *vertexArray, int 
 					levelArray[neighbor]=level+1;
 					*queue_empty=false;
 				}
-			}	
+			}
 		}
-	}	
+	}
 }
 
 // recursive naive NFS traversal
@@ -66,7 +66,7 @@ __global__ void bfs_kernel_dp(int node, int *vertexArray, int *edgeArray, int *l
 
 #if (STREAMS!=0)
 	cudaStream_t s[STREAMS];
-	for (int i=0; i<STREAMS; ++i)  cudaStreamCreateWithFlags(&s[i], cudaStreamNonBlocking);	
+	for (int i=0; i<STREAMS; ++i)  cudaStreamCreateWithFlags(&s[i], cudaStreamNonBlocking);
 #endif
 
 	int num_children = vertexArray[node+1]-vertexArray[node];
@@ -97,15 +97,15 @@ __global__ void bfs_kernel_dp_hier(int node, int *vertexArray, int *edgeArray, i
 
 #if (STREAMS!=0)
 	cudaStream_t s[STREAMS];
-	for (int i=0; i<STREAMS; ++i)  cudaStreamCreateWithFlags(&s[i], cudaStreamNonBlocking);	
+	for (int i=0; i<STREAMS; ++i)  cudaStreamCreateWithFlags(&s[i], cudaStreamNonBlocking);
 #endif
 	__shared__ int child;
 	__shared__ int child_level;
 	__shared__ unsigned num_grandchildren;
-	
+
 	int node_level = levelArray[node];
 	unsigned num_children = vertexArray[node+1]-vertexArray[node];
-	
+
 	for (unsigned childp = blockIdx.x; childp < num_children; childp+=gridDim.x){
 		if (threadIdx.x==0){
 			child = edgeArray[vertexArray[node]+childp];
@@ -127,10 +127,10 @@ __global__ void bfs_kernel_dp_hier(int node, int *vertexArray, int *edgeArray, i
 					if (old_level == grandchild_level){
 						unsigned num_grandgrandchildren = vertexArray[grandchild+1]-vertexArray[grandchild];
 #if (STREAMS!=0)
-						if (num_grandgrandchildren!=0) 
+						if (num_grandgrandchildren!=0)
 							bfs_kernel_dp_hier<<<num_grandgrandchildren,THREADS_PER_BLOCK, 0, s[threadIdx.x%STREAMS]>>>(grandchild, vertexArray, edgeArray, levelArray);
-#else 
-						if (num_grandgrandchildren!=0) 
+#else
+						if (num_grandgrandchildren!=0)
 							bfs_kernel_dp_hier<<<num_grandgrandchildren,THREADS_PER_BLOCK>>>(grandchild, vertexArray, edgeArray, levelArray);
 #endif
 					}
@@ -142,7 +142,7 @@ __global__ void bfs_kernel_dp_hier(int node, int *vertexArray, int *edgeArray, i
 }
 
 // prepare bfs_kernel_dp_cons
-__global__ void  bfs_kernel_dp_cons_prepare(int *levelArray, unsigned int *buffer, 
+__global__ void  bfs_kernel_dp_cons_prepare(int *levelArray, unsigned int *buffer,
 													unsigned *idx, int source)
 {
 	levelArray[source] = 0;		// redundant
@@ -156,7 +156,7 @@ __global__ void  bfs_kernel_dp_cons_prepare(int *levelArray, unsigned int *buffe
 }
 
 // recursive BFS traversal with warp-level consolidation
-__global__ void bfs_kernel_dp_warp_cons(int *vertexArray, int *edgeArray, int *levelArray, 
+__global__ void bfs_kernel_dp_warp_cons(int *vertexArray, int *edgeArray, int *levelArray,
 										unsigned int *queue, unsigned int queue_size,
 										unsigned int *buffer, unsigned int *idx) {
 	unsigned int t_idx;
@@ -166,7 +166,7 @@ __global__ void bfs_kernel_dp_warp_cons(int *vertexArray, int *edgeArray, int *l
 
 	int warp_id = threadIdx.x / WARP_SIZE;
 //	int warp_dim = blockDim.x / WARP_SIZE;
-//	int total_warp_num = gridDim.x * warp_dim;	
+//	int total_warp_num = gridDim.x * warp_dim;
 	if ( threadIdx.x==0 ) {
 		total_num_child = 0;
 		for ( unsigned bid = blockIdx.x; bid<queue_size; bid += gridDim.x) {
@@ -181,7 +181,7 @@ __global__ void bfs_kernel_dp_warp_cons(int *vertexArray, int *edgeArray, int *l
 		ori_idx[warp_id] = atomicAdd(idx, total_num_child/(WARP_SIZE/16));
 		sh_idx[warp_id] = ori_idx[warp_id];
 	}
-	
+
 	for (unsigned bid = blockIdx.x; bid<queue_size; bid += gridDim.x ) {
 		int node = queue[bid];
 		unsigned int num_children = vertexArray[node+1]-vertexArray[node];
@@ -205,7 +205,7 @@ __global__ void bfs_kernel_dp_warp_cons(int *vertexArray, int *edgeArray, int *l
 	//	printf("Launch kernel with %d - %d = %d blocks\n", sh_idx, ori_idx, sh_idx-ori_idx);
 		unsigned int block_num = 13;
 		if (size<block_num) block_num = size;
-		bfs_kernel_dp_warp_cons<<<block_num, THREADS_PER_BLOCK>>>(vertexArray, 
+		bfs_kernel_dp_warp_cons<<<block_num, THREADS_PER_BLOCK>>>(vertexArray,
 									 	edgeArray, levelArray, buffer+ori_idx[warp_id], size,
 										buffer, idx);
 	}
@@ -214,7 +214,7 @@ __global__ void bfs_kernel_dp_warp_cons(int *vertexArray, int *edgeArray, int *l
 }
 
 // recursive BFS traversal with warp-level consolidation
-__global__ void bfs_kernel_dp_warp_cons_unlimited(int *vertexArray, int *edgeArray, int *levelArray, 
+__global__ void bfs_kernel_dp_warp_cons_unlimited(int *vertexArray, int *edgeArray, int *levelArray,
 								unsigned int *queue, unsigned int *buffer, unsigned int *idx) {
 	unsigned int bid = blockIdx.x; // 1-Dimensional grid configuration
 	unsigned int t_idx;
@@ -223,7 +223,7 @@ __global__ void bfs_kernel_dp_warp_cons_unlimited(int *vertexArray, int *edgeArr
 
 	int warp_id = threadIdx.x / WARP_SIZE;
 //	int warp_dim = blockDim.x / WARP_SIZE;
-//	int total_warp_num = gridDim.x * warp_dim;	
+//	int total_warp_num = gridDim.x * warp_dim;
 
 	int node = queue[bid];
 
@@ -249,8 +249,8 @@ __global__ void bfs_kernel_dp_warp_cons_unlimited(int *vertexArray, int *edgeArr
 		atomicInc(&nested_calls, INF);
 #endif
 	//	printf("Launch kernel with %d - %d = %d blocks\n", sh_idx, ori_idx, sh_idx-ori_idx);
-		bfs_kernel_dp_warp_cons_unlimited<<<sh_idx[warp_id]-ori_idx[warp_id], THREADS_PER_BLOCK>>>(vertexArray, 
-									 	edgeArray, levelArray, buffer+ori_idx[warp_id], 
+		bfs_kernel_dp_warp_cons_unlimited<<<sh_idx[warp_id]-ori_idx[warp_id], THREADS_PER_BLOCK>>>(vertexArray,
+									 	edgeArray, levelArray, buffer+ori_idx[warp_id],
 										buffer, idx);
 	}
 
@@ -258,7 +258,7 @@ __global__ void bfs_kernel_dp_warp_cons_unlimited(int *vertexArray, int *edgeArr
 }
 
 // recursive BFS traversal with block-level consolidation
-__global__ void bfs_kernel_dp_warp_malloc_cons(int *vertexArray, int *edgeArray, int *levelArray, 
+__global__ void bfs_kernel_dp_warp_malloc_cons(int *vertexArray, int *edgeArray, int *levelArray,
 								unsigned int *queue, unsigned int *buffer, unsigned int *idx) {
 	unsigned int bid = blockIdx.x; // 1-Dimensional grid configuration
 	unsigned int t_idx;
@@ -267,7 +267,7 @@ __global__ void bfs_kernel_dp_warp_malloc_cons(int *vertexArray, int *edgeArray,
 
 	int warp_id = threadIdx.x / WARP_SIZE;
 //	int warp_dim = blockDim.x / WARP_SIZE;
-//	int total_warp_num = gridDim.x * warp_dim;	
+//	int total_warp_num = gridDim.x * warp_dim;
 
 	int node = queue[bid];
 
@@ -290,21 +290,21 @@ __global__ void bfs_kernel_dp_warp_malloc_cons(int *vertexArray, int *edgeArray,
 
 	if (threadIdx.x%WARP_SIZE==0 && sh_idx[warp_id]>0) {
 	//	printf("Launch kernel with %d - %d = %d blocks\n", sh_idx, ori_idx, sh_idx-ori_idx);
-		bfs_kernel_dp_warp_malloc_cons<<<sh_idx[warp_id], THREADS_PER_BLOCK>>>(vertexArray, 
-									 	edgeArray, levelArray, sh_buffer[warp_id], 
+		bfs_kernel_dp_warp_malloc_cons<<<sh_idx[warp_id], THREADS_PER_BLOCK>>>(vertexArray,
+									 	edgeArray, levelArray, sh_buffer[warp_id],
 										buffer, idx);
 #ifdef FORCE_SYNC
 		cudaDeviceSynhronize();
 		free(sh_buffer[warp_id]);
-#endif	
+#endif
 	}
 
 	// no post work require
 }
 
 // recursive BFS traversal with block-level consolidation
-__global__ void bfs_kernel_dp_block_cons(int *vertexArray, int *edgeArray, int *levelArray, 
-										unsigned int *queue, unsigned int queue_size, 
+__global__ void bfs_kernel_dp_block_cons(int *vertexArray, int *edgeArray, int *levelArray,
+										unsigned int *queue, unsigned int queue_size,
 										unsigned int *buffer, unsigned int *idx) {
 	unsigned int t_idx;
 	__shared__ unsigned int sh_idx;
@@ -341,19 +341,19 @@ __global__ void bfs_kernel_dp_block_cons(int *vertexArray, int *edgeArray, int *
 		atomicInc(&nested_calls, INF);
 #endif
 		//printf("Launch kernel with %d - %d = %d blocks\n", sh_idx, ori_idx, sh_idx-ori_idx);
-		//bfs_kernel_dp_block_cons<<<sh_idx-ori_idx, THREADS_PER_BLOCK>>>(vertexArray, 
+		//bfs_kernel_dp_block_cons<<<sh_idx-ori_idx, THREADS_PER_BLOCK>>>(vertexArray,
 		unsigned int block_num = 13;
 		if (sh_idx-ori_idx<block_num) block_num = sh_idx-ori_idx;
-		bfs_kernel_dp_block_cons<<<13, THREADS_PER_BLOCK>>>(vertexArray, 
-									 	edgeArray, levelArray, buffer+ori_idx, sh_idx-ori_idx, 
+		bfs_kernel_dp_block_cons<<<13, THREADS_PER_BLOCK>>>(vertexArray,
+									 	edgeArray, levelArray, buffer+ori_idx, sh_idx-ori_idx,
 										buffer, idx);
 	}
-	
+
 	// no post work require
 }
 
 // recursive BFS traversal with block-level consolidation
-__global__ void bfs_kernel_dp_block_malloc_cons(int *vertexArray, int *edgeArray, int *levelArray, 
+__global__ void bfs_kernel_dp_block_malloc_cons(int *vertexArray, int *edgeArray, int *levelArray,
 								unsigned int *queue, unsigned int *buffer, unsigned int *idx) {
 	unsigned int bid = blockIdx.x; // 1-Dimensional grid configuration
 	unsigned int t_idx;
@@ -381,8 +381,8 @@ __global__ void bfs_kernel_dp_block_malloc_cons(int *vertexArray, int *edgeArray
 	__syncthreads();
 	if (threadIdx.x==0 && sh_idx>0) {
 	//	printf("Launch kernel with %d - %d = %d blocks\n", sh_idx, ori_idx, sh_idx-ori_idx);
-		bfs_kernel_dp_block_malloc_cons<<<sh_idx, THREADS_PER_BLOCK>>>(vertexArray, 
-									 	edgeArray, levelArray, sh_buffer, 
+		bfs_kernel_dp_block_malloc_cons<<<sh_idx, THREADS_PER_BLOCK>>>(vertexArray,
+									 	edgeArray, levelArray, sh_buffer,
 										buffer, idx);
 #ifdef FORCE_SYNC
 		cudaDeviceSynchronize();
@@ -399,10 +399,10 @@ __global__ void dp_grid_cons_init()
 
 // recursive BFS traversal with grid-level consolidation
 // queue and buffer work like Ping-Pong pointer
-__global__ void bfs_kernel_dp_grid_cons(int *vertexArray, int *edgeArray, int *levelArray, 
-									unsigned int *queue, unsigned int *qidx, 
+__global__ void bfs_kernel_dp_grid_cons(int *vertexArray, int *edgeArray, int *levelArray,
+									unsigned int *queue, unsigned int *qidx,
 									unsigned int *buffer, unsigned int *idx,
-									unsigned int *count) 
+									unsigned int *count)
 {
 	unsigned int bid = blockIdx.x; //+ blockIdx.y*gridDim.x; // 1-Dimensional grid configuration
 	unsigned int t_idx;
@@ -446,8 +446,8 @@ __global__ void bfs_kernel_dp_grid_cons(int *vertexArray, int *edgeArray, int *l
 
 			bfs_kernel_dp_grid_cons<<<dimGrid, THREADS_PER_BLOCK>>>(vertexArray, edgeArray,
 								levelArray, buffer, idx, queue, qidx, count);
-	
-//			bfs_kernel_dp_grid_cons<<<dimGrid, THREADS_PER_BLOCK>>>(vertexArray, edgeArray, 
+
+//			bfs_kernel_dp_grid_cons<<<dimGrid, THREADS_PER_BLOCK>>>(vertexArray, edgeArray,
 //								levelArray, buffer+ori_idx, qidx, buffer, idx, count);
 #ifdef FORCE_SYNC
 			cudaDeviceSynchronize();
@@ -458,10 +458,10 @@ __global__ void bfs_kernel_dp_grid_cons(int *vertexArray, int *edgeArray, int *l
 }
 
 // recursive BFS traversal with grid-level consolidation
-__global__ void bfs_kernel_dp_grid_malloc_cons(int *vertexArray, int *edgeArray, int *levelArray, 
-								unsigned int *queue, unsigned int *qidx, 
+__global__ void bfs_kernel_dp_grid_malloc_cons(int *vertexArray, int *edgeArray, int *levelArray,
+								unsigned int *queue, unsigned int *qidx,
 								unsigned int *buffer, unsigned int *idx,
-								unsigned int *count) 
+								unsigned int *count)
 {
 #if (PROFILE_GPU!=0)
 	if (threadIdx.x+blockDim.x*blockIdx.x==0) nestd_calls++;
@@ -534,7 +534,7 @@ __global__ void bfs_kernel_dp_grid_malloc_cons(int *vertexArray, int *edgeArray,
 
 			bfs_kernel_dp_grid_malloc_cons<<<dimGrid, THREADS_PER_BLOCK>>>(vertexArray, edgeArray,
 								levelArray, buffer, idx, queue, qidx, count);
-	
+
 #ifdef FORCE_SYNC
 			cudaDeviceSynchronize();
 			free(sh_buffer);
@@ -544,8 +544,8 @@ __global__ void bfs_kernel_dp_grid_malloc_cons(int *vertexArray, int *edgeArray,
 
 //	if (threadIdx.x==0 && sh_idx>ori_idx) {
 	//	printf("Launch kernel with %d - %d = %d blocks\n", sh_idx, ori_idx, sh_idx-ori_idx);
-//		bfs_kernel_dp_grid_cons<<<sh_idx-ori_idx, THREADS_PER_BLOCK>>>(vertexArray, 
-//									 	edgeArray, levelArray, buffer+ori_idx, 
+//		bfs_kernel_dp_grid_cons<<<sh_idx-ori_idx, THREADS_PER_BLOCK>>>(vertexArray,
+//									 	edgeArray, levelArray, buffer+ori_idx,
 //										buffer, idx);
 //	}
 
@@ -554,10 +554,10 @@ __global__ void bfs_kernel_dp_grid_malloc_cons(int *vertexArray, int *edgeArray,
 
 // recursive BFS traversal with grid-level consolidation
 // queue and buffer work like Ping-Pong pointer
-__global__ void bfs_kernel_dp_grid_cons_complex(int *vertexArray, int *edgeArray, int *levelArray, 
-									unsigned int *queue, unsigned int *qidx, 
+__global__ void bfs_kernel_dp_grid_cons_complex(int *vertexArray, int *edgeArray, int *levelArray,
+									unsigned int *queue, unsigned int *qidx,
 									unsigned int *buffer, unsigned int *idx,
-									unsigned int *count) 
+									unsigned int *count)
 {
 #if (PROFILE_GPU!=0)
 	if (threadIdx.x+blockDim.x*blockIdx.x==0) nestd_calls++;
@@ -628,8 +628,8 @@ __global__ void bfs_kernel_dp_grid_cons_complex(int *vertexArray, int *edgeArray
 
 			bfs_kernel_dp_grid_cons<<<dimGrid, THREADS_PER_BLOCK>>>(vertexArray, edgeArray,
 								levelArray, buffer, idx, queue, qidx, count);
-	
-//			bfs_kernel_dp_grid_cons<<<dimGrid, THREADS_PER_BLOCK>>>(vertexArray, edgeArray, 
+
+//			bfs_kernel_dp_grid_cons<<<dimGrid, THREADS_PER_BLOCK>>>(vertexArray, edgeArray,
 //								levelArray, buffer+ori_idx, qidx, buffer, idx, count);
 #ifdef FORCE_SYNC
 			cudaDeviceSynchronize();
