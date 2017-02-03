@@ -45,7 +45,7 @@ __global__ void bfs_kernel_flat(int level, int num_nodes, int *vertexArray, int 
 #endif
 	unsigned tid = threadIdx.x + blockDim.x * blockIdx.x;
 	for (int node = tid; node < num_nodes; node += blockDim.x * gridDim.x){
-		printf("DEBUG node in gpu flat: %d \n", node);
+		//printf("DEBUG node in gpu flat: %d \n", node);
 		if(node < num_nodes && levelArray[node] == level){
 			for (int edge=vertexArray[node]; edge<vertexArray[node+1]; edge++){
 				int neighbor=edgeArray[edge];

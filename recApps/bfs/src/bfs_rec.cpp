@@ -111,7 +111,6 @@ void bfs_cpu(int *levelArray){
 		unsigned next_level = levelArray[node]+1;
 		for(int edge = graph.vertexArray[node]; edge < graph.vertexArray[node+1]; edge++){
 			int neighbor = graph.edgeArray[edge];
-			//printf("neighbor: %d\n", neighbor);
 			if (levelArray[neighbor] == UNDEFINED || levelArray[neighbor] > next_level){
 				levelArray[neighbor] = next_level;
 				workingSet.push(neighbor);
@@ -205,7 +204,7 @@ int main(int argc, char* argv[])
 
 	validateArrays(noNodeTotal, graph.levelArray, levelArray_cpu, "GPU bfs rec");
 
-  if (VERBOSE) {
+    if (VERBOSE) {
 		fprintf(stdout, "===MAIN=== :: CUDA runtime init:\t\t%.2lf ms.\n", init_time/N);
 		fprintf(stdout, "===MAIN=== :: CUDA device cudaMalloc:\t\t%.2lf ms.\n", d_malloc_time/N);
 		fprintf(stdout, "===MAIN=== :: CUDA H2D cudaMemcpy:\t\t%.2lf ms.\n", h2d_memcpy_time/N);

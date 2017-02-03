@@ -36,7 +36,7 @@ unsigned int *d_queue_length;
 unsigned int *d_nonstop;
 
 dim3 dimGrid(1,1,1);	// thread+bitmap
-dim3 dimBlock(1,1,1);	
+dim3 dimBlock(1,1,1);
 
 //char *update = new char [noNodeTotal] ();
 //int *queue = new int [queue_max_length];
@@ -53,7 +53,7 @@ inline void cudaCheckError(const char* file, int line, cudaError_t ce)
 }
 
 void prepare_gpu()
-{	
+{
 	start_time = gettime_ms();
 	cudaFree(NULL);
 	end_time = gettime_ms();
@@ -63,7 +63,7 @@ void prepare_gpu()
 		fprintf(stderr, "Choose CUDA device: %d\n", config.device_num);
 		fprintf(stderr, "cudaSetDevice:\t\t%lf\n",end_time-start_time);
 	}
-	
+
 	start_time = gettime_ms();
 	size_t limit = 0;
 	if (DEBUG) {
@@ -88,11 +88,11 @@ void prepare_gpu()
 	//cudaCheckError( __LINE__, cudaMalloc( (void**)&d_nonstop, sizeof(unsigned int) ) );
 	end_time = gettime_ms();
 	d_malloc_time += end_time - start_time;
-	
+
 	start_time = gettime_ms();
 	cudaCheckError( __FILE__, __LINE__, cudaMemcpy( d_vertexArray, graph.vertexArray, sizeof(int)*(noNodeTotal+1), cudaMemcpyHostToDevice) );
 	cudaCheckError( __FILE__, __LINE__, cudaMemcpy( d_edgeArray, graph.edgeArray, sizeof(int)*noEdgeTotal, cudaMemcpyHostToDevice) );
-	//copy the level array from CPU to GPU	
+	//copy the level array from CPU to GPU
 	cudaCheckError( __FILE__, __LINE__, cudaMemcpy( d_levelArray, graph.levelArray, sizeof(int)*noNodeTotal, cudaMemcpyHostToDevice) );
 	end_time = gettime_ms();
 	h2d_memcpy_time += end_time - start_time;
@@ -110,20 +110,20 @@ void clean_gpu()
 // ----------------------------------------------------------
 
 void bfs_flat_gpu()
-{	
+{
 	/* prepare GPU */
 
 	bool queue_empty = false;
 	bool *d_queue_empty;
-	
-	cudaCheckError(  __FILE__, __LINE__, cudaMalloc( &d_queue_empty, sizeof(bool)) );
 
-	unsigned level = 0;	
+	cudaCheckError(  __FILE__, __LINE__, cudaMalloc( &d_queue_empty, sizeof(bool)) );
+  printf("Grid configuration gridxblocks, %d x %d\n", NUM_BLOCKS_FLAT, THREADS_PER_BLOCK_FLAT);
+	unsigned level = 0;
 
 	//level-based traversal
 	while (!queue_empty){
 		cudaCheckError(  __FILE__, __LINE__, cudaMemset( d_queue_empty, true, sizeof(bool)) );
-		printf("Grid configuration gridxblocks, %d x %d\n", NUM_BLOCKS_FLAT, THREADS_PER_BLOCK_FLAT);
+
 		bfs_kernel_flat<<<1, 32>>>(level,noNodeTotal, d_vertexArray, d_edgeArray, d_levelArray, d_queue_empty);
 		cudaCheckError(  __FILE__, __LINE__, cudaGetLastError());
 		cudaCheckError(  __FILE__, __LINE__, cudaMemcpy( &queue_empty, d_queue_empty, sizeof(bool), cudaMemcpyDeviceToHost) );
@@ -132,11 +132,11 @@ void bfs_flat_gpu()
 
 	if (DEBUG)
 		printf("===> GPU #1 - flat parallelism.\n");
-	
+
 }
 
 // ----------------------------------------------------------
-// version #2 - dynamic parallelism - naive 
+// version #2 - dynamic parallelism - naive
 // ----------------------------------------------------------
 void bfs_rec_dp_naive_gpu()
 {
@@ -147,7 +147,7 @@ void bfs_rec_dp_naive_gpu()
 	bfs_kernel_dp<<<1,block_size>>>(source, d_vertexArray, d_edgeArray, d_levelArray);
 	cudaCheckError(  __FILE__, __LINE__, cudaGetLastError());
 	cudaCheckError(  __FILE__, __LINE__, cudaDeviceSynchronize());
-	
+
 	if (DEBUG)
 		printf("===> GPU #2 - nested parallelism naive.\n");
 }
@@ -177,7 +177,7 @@ void bfs_rec_dp_cons_gpu()
 	cudaCheckError(  __FILE__, __LINE__, cudaMalloc( &d_buffer, sizeof(unsigned int)*GM_BUFF_SIZE) );
 	cudaCheckError(  __FILE__, __LINE__, cudaMalloc( &d_idx, sizeof(unsigned int)) );
     bfs_kernel_dp_cons_prepare<<<1,1>>>(d_levelArray, d_buffer, d_idx, source);
-	
+
 	int children = 1;
 	switch (config.solution) {
 	case 3:
@@ -211,7 +211,7 @@ void bfs_rec_dp_cons_gpu()
 		cudaCheckError(  __FILE__, __LINE__, cudaMemset( d_count, 0, sizeof(unsigned int)) );
 		if (DEBUG)
     		fprintf(stdout, "grid level consolidation\n");
-		// by default, it utilize malloc 
+		// by default, it utilize malloc
 		dp_grid_cons_init<<<1,1>>>();
 		bfs_kernel_dp_grid_cons<<<children, THREADS_PER_BLOCK>>>(d_vertexArray, d_edgeArray, d_levelArray,
 												d_buffer, d_idx, d_queue, d_qidx, d_count);
@@ -226,7 +226,7 @@ void bfs_rec_dp_cons_gpu()
 	cudaDeviceSynchronize();
 	cudaCheckError(  __FILE__, __LINE__, cudaGetLastError());
 	cudaCheckError(  __FILE__, __LINE__, cudaDeviceSynchronize());
-	
+
 	if (DEBUG)
 		printf("===> GPU #4 - nested parallelism consolidation.\n", end_time-start_time);
 	//gpu_print<<<1,1>>>(d_idx);
@@ -244,7 +244,7 @@ void BFS_REC_GPU()
 	cudaCheckError( __FILE__, __LINE__, cudaSetDevice(config.device_num) );
 	cudaCheckError( __FILE__, __LINE__, cudaDeviceReset());
 	prepare_gpu();
-	
+
 #ifdef GPU_PROFILE
 	reset_gpu_statistics<<<1,1>>>();
 	cudaDeviceSynchronize();
@@ -252,7 +252,7 @@ void BFS_REC_GPU()
 
 	start_time = gettime_ms();
 	switch (config.solution) {
-		case 0:  bfs_flat_gpu();	// 
+		case 0:  bfs_flat_gpu();	//
 			break;
 		case 1:  bfs_rec_dp_naive_gpu();	//
 			break;
@@ -280,4 +280,3 @@ void BFS_REC_GPU()
 
 	clean_gpu();
 }
-
