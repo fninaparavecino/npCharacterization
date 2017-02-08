@@ -21,7 +21,7 @@
 #define CONSOLIDATE_LEVEL 0
 #endif
 
-#define STREAMS 4
+#define STREAMS 30
 
 #include "bfs_rec_kernel.cu"
 
@@ -140,13 +140,23 @@ void bfs_flat_gpu()
 // ----------------------------------------------------------
 void bfs_rec_dp_naive_gpu()
 {
+	cudaEvent_t start, stop;
+	float time;
 	/* prepare GPU */
 
 	int children = graph.vertexArray[source+1]-graph.vertexArray[source];
 	unsigned block_size = min (children, THREADS_PER_BLOCK);
+	cudaEventCreate(&start);
+	cudaEventCreate(&stop);
+	cudaEventRecord(start, 0);
 	bfs_kernel_dp<<<1,block_size>>>(source, d_vertexArray, d_edgeArray, d_levelArray);
 	cudaCheckError(  __FILE__, __LINE__, cudaGetLastError());
 	cudaCheckError(  __FILE__, __LINE__, cudaDeviceSynchronize());
+	cudaEventRecord(stop, 0);
+	cudaEventSynchronize(stop);
+	//Display time
+	cudaEventElapsedTime(&time, start, stop);
+	printf("\tParallel Job time: %.2f ms", time);
 
 	if (DEBUG)
 		printf("===> GPU #2 - nested parallelism naive.\n");
@@ -163,7 +173,7 @@ void bfs_rec_dp_hier_gpu()
 	cudaCheckError(  __FILE__, __LINE__, cudaGetLastError());
 	cudaCheckError(  __FILE__, __LINE__, cudaDeviceSynchronize());
 	if (DEBUG)
-		printf("===> GPU #3 - nested parallelism hierarchical.\n", gettime_ms()-start_time);
+		printf("===> GPU #3 - nested parallelism hierarchical %f.\n", gettime_ms()-start_time);
 }
 
 // ----------------------------------------------------------
@@ -228,7 +238,7 @@ void bfs_rec_dp_cons_gpu()
 	cudaCheckError(  __FILE__, __LINE__, cudaDeviceSynchronize());
 
 	if (DEBUG)
-		printf("===> GPU #4 - nested parallelism consolidation.\n", end_time-start_time);
+		printf("===> GPU #4 - nested parallelism consolidation %f.\n", end_time-start_time);
 	//gpu_print<<<1,1>>>(d_idx);
 	cudaCheckError( __FILE__, __LINE__, cudaFree(d_buffer) );
 	cudaCheckError( __FILE__, __LINE__, cudaFree(d_idx) );
@@ -237,6 +247,33 @@ void bfs_rec_dp_cons_gpu()
 	cudaCheckError( __FILE__, __LINE__, cudaFree(d_qidx) );
 	cudaCheckError( __FILE__, __LINE__, cudaFree(d_count) );
 #endif
+}
+
+// ----------------------------------------------------------
+// version #6 - recursive GPU bfs
+// ----------------------------------------------------------
+void bfs_rec()
+{
+	cudaEvent_t start, stop;
+	float time;
+	/* prepare GPU */
+
+	int children = graph.vertexArray[source+1]-graph.vertexArray[source];
+	unsigned block_size = min (children, THREADS_PER_BLOCK);
+	cudaEventCreate(&start);
+	cudaEventCreate(&stop);
+	cudaEventRecord(start, 0);
+	bfs_kernel_rec<<<1,block_size>>>(source, d_vertexArray, d_edgeArray, d_levelArray);
+	cudaCheckError(  __FILE__, __LINE__, cudaGetLastError());
+	cudaCheckError(  __FILE__, __LINE__, cudaDeviceSynchronize());
+	cudaEventRecord(stop, 0);
+	cudaEventSynchronize(stop);
+	//Display time
+	cudaEventElapsedTime(&time, start, stop);
+	printf("\tParallel Job time: %.2f ms", time);
+
+	if (DEBUG)
+		printf("===> GPU #6 - BFS rec.\n");
 }
 
 void BFS_REC_GPU()
@@ -262,6 +299,8 @@ void BFS_REC_GPU()
 		case 4:
 		case 5:  bfs_rec_dp_cons_gpu();	//
 			break;
+		case 6:  bfs_rec();	//
+				break;
 		default:
 			break;
 	}

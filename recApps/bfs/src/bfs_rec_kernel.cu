@@ -8,6 +8,8 @@
 #define WARP_SIZE 32
 #define SHM_BUFF_SIZE 256
 
+#define MAXNEIGHBORS 1024
+
 #define GPU_PROFILE
 
 #ifdef GPU_PROFILE
@@ -58,6 +60,30 @@ __global__ void bfs_kernel_flat(int level, int num_nodes, int *vertexArray, int 
 	}
 }
 
+// Recursive DFS
+__global__ void bfs_kernel_rec( int node, int *vertexArray, int *edgeArray, int *levelArray){
+
+	unsigned tid = threadIdx.x + blockDim.x * blockIdx.x;
+	int total_neighbors = vertexArray[node+1] - vertexArray[node];
+	if (tid > total_neighbors)
+		return;
+
+	int level_value = levelArray[node];
+	int neighbor = edgeArray[vertexArray[node] + tid];
+	if (levelArray[neighbor]==UNDEFINED || levelArray[neighbor]>(level_value+1)){
+		levelArray[neighbor] = level_value + 1;
+		// call recursive child kernel
+		//unsigned old_level = atomicMin(&levelArray[neighbor], level_value + 1);
+		//if (old_level == levelArray[neighbor]){
+			int blockChild = vertexArray[neighbor+1] - vertexArray[neighbor];
+			blockChild = min(blockChild, THREADS_PER_BLOCK);
+			if (blockChild!=0)
+				bfs_kernel_rec<<<1, blockChild>>>( neighbor, vertexArray, edgeArray, levelArray);
+		//}
+		//cudaDeviceSynchronize();
+	}
+}
+
 // recursive naive NFS traversal
 __global__ void bfs_kernel_dp(int node, int *vertexArray, int *edgeArray, int *levelArray){
 #ifdef GPU_PROFILE
@@ -75,14 +101,14 @@ __global__ void bfs_kernel_dp(int node, int *vertexArray, int *edgeArray, int *l
 		int node_level = levelArray[node];
 		int child_level = levelArray[child];
 		if (child_level==UNDEFINED || child_level>(node_level+1)){
-			unsigned old_level = atomicMin(&levelArray[child],node_level+1);
+			unsigned old_level = atomicMin(&levelArray[child], node_level + 1);
 			if (old_level == child_level){
-				unsigned num_grandchildren=vertexArray[child+1]-vertexArray[child];
+				unsigned num_grandchildren = vertexArray[child+1]-vertexArray[child];
 				unsigned block_size = min(num_grandchildren, THREADS_PER_BLOCK);
 #if (STREAMS!=0)
-			        if (block_size!=0) bfs_kernel_dp<<<1,block_size, 0, s[threadIdx.x%STREAMS]>>>(child, vertexArray, edgeArray, levelArray);
+			        if (block_size!=0) bfs_kernel_dp<<<1, block_size, 0, s[threadIdx.x%STREAMS]>>>(child, vertexArray, edgeArray, levelArray);
 #else
-			        if (block_size!=0) bfs_kernel_dp<<<1,block_size>>>(child, vertexArray, edgeArray, levelArray);
+			        if (block_size!=0) bfs_kernel_dp<<<1, block_size>>>(child, vertexArray, edgeArray, levelArray);
 #endif
 			}
 		}
