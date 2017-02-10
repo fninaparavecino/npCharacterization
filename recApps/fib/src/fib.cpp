@@ -68,21 +68,21 @@ int main(int argc, char** argv){
     if ( !parse_arguments(argc, argv, &n) ) return 0;
     printf("Computing fib(%d)\n", n);
     printf("Fib of %d: %lld\n", n, fib(n));
-    printf("Fib Sequential of %d: %lld\n", n, fibSeq(n));
+    printf("Fib Seq of %d: %lld\n", n, fibSeq(n));
 
 
     // Call GPU kernel
     long int arraySeed[4] = {0, 1, 2178309, 3524578};
-    long int* arrayN = (long int*)malloc(n*sizeof(long int));
-    memset(arrayN, 0, n*sizeof(long int));
+    long int* arrayN = (long int*)malloc((n+1)*sizeof(long int));
+    memset(arrayN, 0, (n+1)*sizeof(long int));
     int auxIndex = 0;
-    for(int i=0; i < n; i=i+32){
+    for(int i=0; i <= n; i=i+32){
       arrayN[i] = arraySeed[auxIndex];
       arrayN[i+1] = arraySeed[auxIndex+1];
       auxIndex += 2;
     }
     fibGPU(n, arrayN);
 
-    printf("Fib GPU of %d: %ld\n", n, arrayN[n-1]);
+    printf("Fib GPU of %d: %ld\n", n, arrayN[n]);
     return 0;
 }
