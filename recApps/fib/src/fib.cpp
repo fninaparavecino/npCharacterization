@@ -1,8 +1,18 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <sys/time.h>
 #include "fib.h"
 using namespace std;
+
+double getWallTime(){
+        struct timeval time;
+        if(gettimeofday(&time,NULL)){
+                printf("Error getting time\n");
+                return 0;
+        }
+        return (double)time.tv_sec + (double)time.tv_usec * .000001;
+}
 
 void usage() {
     fprintf(stderr,"\n");
@@ -49,14 +59,24 @@ long long int fib(int n){
         return fib(n-1) + fib(n-2);
     }
 }
-long long int fibSeq(int n, long int *arrayNSeq){
+long long int fibSeq(int n, unsigned long int *arrayNSeq){
 
     for (int i = 2; i <= n; i++){
       arrayNSeq[i] = arrayNSeq[i-1]+ arrayNSeq[i-2];
     }
     return arrayNSeq[n];
 }
-void verifyArrays(int n, long int *array1, long int *array2, const char *message)
+long long int fibRecMemo(int n, unsigned long int* array){
+  if (n == 0 || n == 1)
+    return array[n];
+  if (array[n] != 0)
+    return array[n];
+
+  array[n] = fibRecMemo(n-1, array) + array[n-2];
+
+  return array[n];
+}
+void verifyArrays(int n, unsigned long int *array1, unsigned long int *array2, const char *message)
 {
 	int flag = 1;
 	for (int i=0; i < n; i++){
@@ -69,30 +89,45 @@ void verifyArrays(int n, long int *array1, long int *array2, const char *message
 	if (flag) printf("PASS: %s !\n", message);
 }
 
-
 int main(int argc, char** argv){
 
     int n = 0;
+    double wall0, wall1;
 
     // seeds
-    long int arraySeed[4] = {0, 1, 2178309, 3524578};
+    unsigned long int arraySeed[6] = {0, 1, 2178309, 3524578, 10610209857723, 17167680177565};
 
     if ( !parse_arguments(argc, argv, &n) ) return 0;
 
     printf("Computing fib(%d)\n", n);
+    wall0 = getWallTime();
+    fib(n); // it takes time
+    wall1 = getWallTime();
+    printf("Fib Rec\n\tTime Performance: %f ms\n", wall1 - wall0);
 
-    // printf("Fib of %d: %lld\n", n, fib(n)); // Commenting out, due to it is taking long time to compute
-
-    long int* arrayNSeq = (long int*)malloc(sizeof(long int) * (n+1));
-    memset(arrayNSeq, 0, (n+1)*sizeof(long int));
+    // Sequential using iterative approach
+    unsigned long int* arrayNSeq = (unsigned long int*)malloc(sizeof(unsigned long int) * (n+1));
+    memset(arrayNSeq, 0, (n+1)*sizeof(unsigned long int));
     arrayNSeq[0] = 0; arrayNSeq[1] = 1;
 
+    wall0 = getWallTime();
     fibSeq(n, arrayNSeq);
-    printf("Fib Seq of %d: %ld\n", n, arrayNSeq[n]);
+    wall1 = getWallTime();
+    printf("Fib Seq \n\tTime Performance: %f ms\n", (wall1- wall0));
+
+    //Sequential using recursive with memoization approach
+    unsigned long int* arrayNRec = (unsigned long int*) malloc(sizeof(unsigned long int) * (n+1));
+    memset(arrayNRec, 0, (n+1)*sizeof(unsigned long int));
+    arrayNRec[0] = 0; arrayNRec[1] = 1;
+    wall0 = getWallTime();
+    fibRecMemo(n, arrayNRec);
+    wall1 = getWallTime();
+    printf("Fib Rec Memo\n\tTime Performance: %f ms\n", (wall1- wall0));
+    verifyArrays(n+1, arrayNSeq, arrayNRec, "\tCPU Seq vs CPU Rec Memo");
 
     // Call GPU kernel
-    long int* arrayN = (long int*)malloc((n+1)*sizeof(long int));
-    memset(arrayN, 0, (n+1)*sizeof(long int));
+    unsigned long int* arrayN = (unsigned long int*)malloc((n+1)*sizeof(unsigned long int));
+    memset(arrayN, 0, (n+1)*sizeof(unsigned long int));
     int auxIndex = 0;
     for(int i=0; i <= n; i=i+32){
       arrayN[i] = arraySeed[auxIndex];
@@ -101,10 +136,10 @@ int main(int argc, char** argv){
     }
     fibGPU(n, arrayN);
 
-    printf("Fib GPU of %d: %ld\n", n, arrayN[n]);
-
+    // Verify results
     verifyArrays(n+1, arrayNSeq, arrayN, "CPU vs GPU");
 
+    // Free memory
     free(arrayN); free(arrayNSeq);
     return 0;
 }
