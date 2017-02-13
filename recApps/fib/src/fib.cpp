@@ -139,7 +139,15 @@ int main(int argc, char** argv){
     // Verify results
     verifyArrays(n+1, arrayNSeq, arrayN, "CPU vs GPU");
 
+    // Call Rec GPU Kernel
+    unsigned long int* arrayNGPURec = (unsigned long int*)malloc((n+1)*sizeof(unsigned long int));
+    memset(arrayNGPURec, 0, (n+1)*sizeof(unsigned long int));
+    arrayNGPURec[0] = 0; arrayNGPURec[1] = 1;
+    fibGPURec(n, arrayNGPURec);
+
+    // Verify results
+    verifyArrays(n+1, arrayNSeq, arrayNGPURec, "CPU vs GPURec");
     // Free memory
-    free(arrayN); free(arrayNSeq);
+    free(arrayN); free(arrayNSeq); free(arrayNGPURec);
     return 0;
 }

@@ -27,6 +27,18 @@ __global__ void fib_kernel_plain(int n, unsigned long int* vFib){
     }
 }
 
+__global__ void fib_kernel_rec(int n, unsigned long int* vFib){
+    if (n == 0 || n == 1)
+        return;
+
+    if (vFib[n-1] != 0){
+      vFib[n] = vFib[n-1] + vFib[n-2];
+    }
+    else{
+        fib_kernel_rec<<<1, 1>>>(n-1, vFib);
+    }
+}
+
 void fibGPU(int n, unsigned long int* arrayN)
 {
   // time variables
@@ -52,6 +64,47 @@ void fibGPU(int n, unsigned long int* arrayN)
   dim3 blocksPerGrid((n+31)/32, 1, 1);
 
   printf("Launching fib_kernel (%d x %d)...\n", blocksPerGrid.x, threadsPerBlock.x);
+  cudaEventRecord(start, 0);
+  fib_kernel_plain<<<blocksPerGrid, threadsPerBlock>>>(n, devArrayN);
+  cudaErrCheck(cudaDeviceSynchronize());
+  cudaEventRecord(stop, 0);
+  cudaEventSynchronize(stop);
+  //Display time
+	cudaEventElapsedTime(&time, start, stop);
+	printf("\tParallel Kernel time: %.2f ms\n", time);
+
+  // retrieve results
+  cudaErrCheck(cudaMemcpy(arrayN, devArrayN, sizeof(unsigned long int)*(n+1), cudaMemcpyDeviceToHost));
+
+  //Free resource
+  cudaFree(devArrayN);
+}
+
+void fibGPURec(int n, unsigned long int* arrayN)
+{
+  // time variables
+	cudaEvent_t start, stop;
+	float time;
+	cudaEventCreate(&start);
+	cudaEventCreate(&stop);
+
+  // device arrayN
+  unsigned long int *devArrayN = 0;
+
+  // define device
+  cudaErrCheck(cudaSetDevice(0));
+
+  // cuda malloc for devArrayN
+  cudaErrCheck(cudaMalloc((void**)&devArrayN, sizeof(unsigned long int)*(n+1)));
+
+  // cuda memcopy
+  cudaErrCheck(cudaMemcpy(devArrayN, arrayN, sizeof(unsigned long int)*(n+1), cudaMemcpyHostToDevice));
+
+  // call the kernel
+  dim3 threadsPerBlock(1, 1, 1);
+  dim3 blocksPerGrid(1, 1, 1);
+
+  printf("Launching fib_kernel_rec (%d x %d)...\n", blocksPerGrid.x, threadsPerBlock.x);
   cudaEventRecord(start, 0);
   fib_kernel_plain<<<blocksPerGrid, threadsPerBlock>>>(n, devArrayN);
   cudaErrCheck(cudaDeviceSynchronize());
