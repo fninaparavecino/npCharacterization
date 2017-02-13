@@ -55,11 +55,11 @@ int readInputDIMACS9()
             p = strtok(NULL, " ");
             edgeWeight = atoi(p);
             //printf("%d %d %d\n", tailNode, headNode, edgeWeight);
-            adjacencyNodeList[tailNode].push_back(headNode);            
+            adjacencyNodeList[tailNode].push_back(headNode);
 			adjacencyWeightList[tailNode].push_back(edgeWeight);
         }
     }
-	
+
 	return 0;
 }
 
@@ -67,8 +67,8 @@ int readInputDIMACS10()
 {
     //int degree = 0;
 	char *p;
-    int tailNode, headNode, edgeWeight;
-    while( fgets(buff, BUFF_SIZE, fp) != NULL ){ // read comments
+  int tailNode, headNode, edgeWeight;
+  while( fgets(buff, BUFF_SIZE, fp) != NULL ){ // read comments
         if ( buff[0] == '%' )   continue;
 		else	break;
 	}
@@ -95,7 +95,7 @@ int readInputDIMACS10()
 			//degree++;
 			headNode = atoi(p) - 1;
 			adjacencyNodeList[tailNode].push_back(headNode);
-			int weight = rand() % 1000 + 1;			
+			int weight = rand() % 1000 + 1;
 			adjacencyWeightList[tailNode].push_back(weight);
 			p = strtok(NULL, " ");
 		}
@@ -124,12 +124,12 @@ int readInputSLNDC()
 	}
 	p = strtok(buff+9, " ");
     noNodeTotal = atoi(p);
-    p = strtok( NULL, " ");		p = strtok( NULL, " "); 
+    p = strtok( NULL, " ");		p = strtok( NULL, " ");
 	noEdgeTotal = atoi(p);
 	if ( fgets(buff, 256, fp)==NULL ) {
 		EXIT("");
 	}
-	
+
 	tempNodeList = new list<int> [noNodeTotal*2];
 	mapTable = new int [noNodeTotal*2] ();
 	noEdgeTotal = 0;
@@ -219,7 +219,7 @@ int convertCSR()
 			adjacencyNodeList[i].pop_back();
 			adjacencyWeightList[i].pop_back();
 			//printf("%d(%d)\t",graph.edgeArray[startingPos+noEdgePerNode]+1, graph.weightArray[startingPos+noEdgePerNode]);
-			noEdgePerNode++;	
+			noEdgePerNode++;
 		}
 		//printf("\n");
 	}
@@ -272,7 +272,7 @@ int invertGraph()
 	}
 	graph.childVertexArray[noNodeTotal] = noEdgeTotal;
 	delete [] childAdjNodeList;
- 
+
 	return 0;
 }
 
@@ -288,10 +288,10 @@ void BFS_queue_init(queue<int> &myqueue, int depth, int degree)
 	graph.frontier[source] = 1;
 	graph.levelArray[source] = 0;
 	int start = graph.vertexArray[source];
-	int end = graph.vertexArray[source+1];		
+	int end = graph.vertexArray[source+1];
 	if ( end-start>degree )
 		end = start + degree;
-	for (int i=start; i<end; ++i){	// DFS 
+	for (int i=start; i<end; ++i){	// DFS
 		int curr = graph.edgeArray[i];
 		//printf("From %d(%d)", source, graph.levelArray[source]);
 		myqueue.push(curr);
@@ -299,15 +299,15 @@ void BFS_queue_init(queue<int> &myqueue, int depth, int degree)
 		for (int j=1; j<=depth; j++){
 			int level = j;
 			graph.levelArray[curr] = level;
-			//printf(" -> %d(%d)", curr, graph.levelArray[curr]);			
+			//printf(" -> %d(%d)", curr, graph.levelArray[curr]);
 			int nextStart = graph.vertexArray[curr];
 			int nextEnd = graph.vertexArray[curr+1];
-			int k;		
+			int k;
 			for (k=nextStart; k<nextEnd; ++k) {
 				curr = graph.edgeArray[k];
 				if ( graph.levelArray[curr]==MAX_LEVEL ){	// unvisited node, break out the for loop
 					myqueue.push(curr);
-					graph.frontier[curr] = 1;	
+					graph.frontier[curr] = 1;
 					break;
 				}
 			}
@@ -328,17 +328,17 @@ void SSSP_queue_init(queue<int> &myqueue, int depth, int degree)
 	graph.frontier[source] = 1;
 	graph.costArray[source] = 0;
 	int start = graph.vertexArray[source];
-	int end = graph.vertexArray[source+1];		
+	int end = graph.vertexArray[source+1];
 	if ( end-start>degree )
 		end = start + degree;
-	for (int i=start; i<end; ++i){	// DFS 
+	for (int i=start; i<end; ++i){	// DFS
 		int curr = graph.edgeArray[i];
 		//printf("From %d(%d)", source, graph.levelArray[source]);
 		myqueue.push(curr);
 		graph.frontier[curr] = 1;
 		int pre = graph.costArray[curr] = graph.weightArray[i];
 		for (int j=1; j<=depth; j++){
-			//printf(" -> %d(%d)", curr, graph.levelArray[curr]);			
+			//printf(" -> %d(%d)", curr, graph.levelArray[curr]);
 			int nextStart = graph.vertexArray[curr];
 			int nextEnd = graph.vertexArray[curr+1];
 			int k;
