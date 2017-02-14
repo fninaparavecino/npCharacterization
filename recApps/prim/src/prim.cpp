@@ -112,27 +112,34 @@ int minKey(int key[], bool mstSet[])
    // Initialize min value
    int min = INT_MAX, min_index;
 
-   for (int v = 0; v < V; v++)
+   for (int v = 0; v < noNodeTotal; v++)
      if (mstSet[v] == false && key[v] < min)
          min = key[v], min_index = v;
 
    return min_index;
 }
-
+int getWeight(int parent, int child){
+  for(size_t i = graph.vertexArray[parent]; i < graph.vertexArray[parent+1]; i++){
+    if (graph.edgeArray[i] == child) {
+      return graph.weightArray[i];
+    }
+  }
+  return -1;
+}
 // A utility function to print the constructed MST stored in parent[]
 int printMST(int parent[])
 {
    printf("Edge   Weight\n");
    for (int i = 1; i < noNodeTotal; i++)
-      printf("%d - %d    %d \n", parent[i], i, graph.weightArray[graph.vertexArray[i]]);
+      printf("%d - %d    %d \n", parent[i], i, getWeight(parent[i], i));
 }
 // Function to construct and print MST for a graph represented using adjacency
 // matrix representation
 void primCPU(int *parent)
 {
      //int parent[V]; // Array to store constructed MST
-     int key[V];   // Key values used to pick minimum weight edge in cut
-     bool mstBool[];  // To represent set of vertices not yet included in MST
+     int key[noNodeTotal];   // Key values used to pick minimum weight edge in cut
+     bool mstBool[noNodeTotal];  // To represent set of vertices not yet included in MST
 
      // Initialize all keys as INFINITE
      for (int i = 0; i < noNodeTotal; i++)
@@ -147,20 +154,27 @@ void primCPU(int *parent)
      {
         // Pick the minimum key vertex from the set of vertices
         // not yet included in MST
-        int u = minKey(key, mstSet);
+        int u = minKey(key, mstBool);
+        printf("Chosen node: %d\n", u);
 
         // Add the picked vertex to the MST Set
-        mstSet[u] = true;
+        mstBool[u] = true;
 
         // Update key value and parent index of the adjacent vertices of
         // the picked vertex. Consider only those vertices which are not yet
         // included in MST
-        for (int v = graph.vertexArray[u]; v < graph.vertexArray[u+1]; v++){
+        for (int edgeId = graph.vertexArray[u]; edgeId < graph.vertexArray[u+1]; edgeId++){
+          int v = graph.edgeArray[edgeId];
+          printf("Vertex %d has edge to %d\n", u, v);
           // graph[u][v] is non zero only for adjacent vertices of m
           // mstSet[v] is false for vertices not yet included in MST
           // Update the key only if graph[u][v] is smaller than key[v]
-          if (mstSet[graph.edgeArray[v]] == false && graph.weightArray[v] <  key[v])
-            parent[v]  = u, key[v] = graph.weightArray[v];
+          //printf("Neighbor key[%d]: %d, graph.weight[%d]: %d", v, key[v], v, graph.weightArray[edgeId]);
+          if (mstBool[v] == false && graph.weightArray[edgeId] <  key[v]){
+            printf("Edge added: %d with weight %d\n", v, graph.weightArray[edgeId]);
+            parent[v]  = u, key[v] = graph.weightArray[edgeId];
+          }
+
         }
      }
 
@@ -231,9 +245,19 @@ int main(int argc, char* argv[])
 	}
 	printf("\n");*/
 
+  int *parentMST = (int*) malloc(sizeof(int) * noNodeTotal);
+  memset(parentMST, 0, noNodeTotal*sizeof(int));
+  primCPU(parentMST);
+
+  // Call GPU
+  graph.keyArray[source] = 0;
+  graph.levelArray[source] = -1;
+  primGPU();
+
+  validateArrays(noNodeTotal, graph.levelArray, parentMST, "GPU bfs rec");
+
 	//starts execution
 	printf("\n===MAIN=== :: [num_nodes,num_edges] = %u, %u\n", noNodeTotal, noEdgeTotal);
-
 
 	clear();
 	return 0;

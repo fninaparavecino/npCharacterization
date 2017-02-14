@@ -11,6 +11,7 @@
 #include <list>
 #include <queue>
 #include "omp.h"
+#include <limits.h>
 
 #define BUFF_SIZE 1024000
 
@@ -39,6 +40,7 @@ struct _GRAPH_{
 	int *outdegreeArray;
 	float *rankArray;
 	int *colorArray;
+	int *keyArray;
 };
 
 double gettime();

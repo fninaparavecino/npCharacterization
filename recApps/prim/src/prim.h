@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/time.h>
+#include <limits.h>
 
 #include <vector>
 #include <list>

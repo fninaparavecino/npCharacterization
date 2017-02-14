@@ -200,11 +200,13 @@ int convertCSR()
 	graph.frontier = new char [noNodeTotal] ();
 	graph.update = new char [noNodeTotal] ();
 	graph.visited = new char [noNodeTotal] ();
+	graph.keyArray = new int [noNodeTotal] ();
 	memset(graph.costArray, 0, sizeof(int)*noNodeTotal);
 	memset(graph.levelArray, 0, sizeof(int)*noNodeTotal);
 	memset(graph.frontier, 0, sizeof(char)*noNodeTotal);
 	memset(graph.update, 0, sizeof(char)*noNodeTotal);
 	memset(graph.visited, 0, sizeof(char)*noNodeTotal);
+	memset(graph.keyArray, INT_MAX, sizeof(int)*noNodeTotal);
 
 	startingPos = 0;
 	noEdgePerNode = 0;
@@ -403,6 +405,7 @@ int clear()
 	delete [] graph.vertexArray;
 	delete [] graph.edgeArray;
 	delete [] graph.weightArray;
+	delete [] graph.keyArray;
 	delete [] graph.frontier;
 
 	return 0;
