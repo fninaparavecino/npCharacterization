@@ -1,7 +1,5 @@
 #include "prim.h"
 
-#define N 1
-
 using namespace std;
 
 CONF config;

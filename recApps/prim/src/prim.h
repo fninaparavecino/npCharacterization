@@ -32,6 +32,6 @@ extern double h2d_memcpy_time;
 extern double ker_exe_time;
 extern double d2h_memcpy_time;
 
-//void BFS_REC_GPU();
+void primGPU();
 
 #endif

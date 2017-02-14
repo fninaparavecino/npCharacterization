@@ -1,4 +1,5 @@
-#include<stdio.h>
+#include <stdio.h>
+#include <cuda.h>
 #include "prim.h"
 
 #ifndef THREADS_PER_BLOCK // nested kernel block size
