@@ -6,6 +6,10 @@
 #define THREADS_PER_BLOCK 64
 #endif
 
+#ifndef WARP_SIZE // nested kernel block size
+#define WARP_SIZE 32
+#endif
+
 int *d_vertexArray;
 int *d_edgeArray;
 int *d_levelArray;
@@ -24,7 +28,7 @@ inline void cudaAssert(cudaError_t code, const char *file, int line, bool abort=
    }
 }
 __global__ void primRec(int node, int numNodes, int* vertexArray, int* edgeArray,
-                        int* weightArray, bool* visitedArray, int* key, int* mstParent){
+                        int* weightArray, bool* visitedArray, int* keyArray, int* mstParent){
   int idx = threadIdx.x + blockIdx.x * blockDim.x;
 
   if (idx > numNodes)
@@ -37,20 +41,20 @@ __global__ void primRec(int node, int numNodes, int* vertexArray, int* edgeArray
   int childId = vertexArray[node] + idx;
   int childWeight = weightArray[vertexArray[node]] + idx;
 
-  // find minChild
+  // set min to first child
   int minChild = edgeArray[vertexArray[node]];
   int minChildId = vertexArray[node];
   int minChildWeight = weightArray[vertexArray[node]];
 
-
-  for (int i=1; i<32; i++){
-    int idShfl = __shfl(child, i);
+  // find minChild among children
+  for (int i=1;i < blockDim.x && i < WARP_SIZE; i++){
+    int childShfl = __shfl(child, i);
     int childIdShfl = __shfl(childId, i);
     int weightShfl = __shfl(childWeight, i);
 
     if (weightShfl < minChildWeight){
       minChildWeight = weightShfl;
-      minChild = idShfl;
+      minChild = childShfl;
       minChildId = childIdShfl;
     }
   }
@@ -59,11 +63,12 @@ __global__ void primRec(int node, int numNodes, int* vertexArray, int* edgeArray
   if (child != minChild)
     return;
 
-  if (visitedArray[minChild] == false && weightArray[minChildId] < key[minChild]){
+  if (visitedArray[minChild] == false && weightArray[minChildId] < keyArray[minChild]){
+    //printf("===GPU Kernel=== child selected: %d\n", minChild);
     mstParent[minChild] = node;
-    key[minChild] = weightArray[minChildId];
+    keyArray[minChild] = weightArray[minChildId];
     int grandChildren = vertexArray[minChild+1] - vertexArray[minChild];
-    primRec<<<1, grandChildren>>>(minChild, numNodes, vertexArray, edgeArray, weightArray, visitedArray, key, mstParent);
+    primRec<<<1, grandChildren>>>(minChild, numNodes, vertexArray, edgeArray, weightArray, visitedArray, keyArray, mstParent);
   }
 }
 
@@ -88,10 +93,10 @@ void primRecWrapper()
 	cudaEventSynchronize(stop);
 	//Display time
 	cudaEventElapsedTime(&time, start, stop);
-	printf("\tParallel Job time: %.2f ms", time);
+	printf("\tParallel Job time: %.2f ms\n", time);
 
 	if (DEBUG)
-		printf("===> GPU #6 - BFS rec.\n");
+		printf("===> GPU Prim rec.\n");
 }
 
 void prepare_gpu()
@@ -120,7 +125,6 @@ void prepare_gpu()
 	}
 	end_time = gettime_ms();
 
-
 	/* Allocate GPU memory */
 	start_time = gettime_ms();
 	cudaErrCheck(cudaMalloc( (void**)&d_vertexArray, sizeof(int)*(noNodeTotal+1) ) );
@@ -129,8 +133,6 @@ void prepare_gpu()
   cudaErrCheck(cudaMalloc( (void**)&d_visitedArray, sizeof(bool)*noNodeTotal ) );
   cudaErrCheck(cudaMalloc( (void**)&d_weightArray, sizeof(int)*noEdgeTotal ) );
   cudaErrCheck(cudaMalloc( (void**)&d_keyArray, sizeof(int)*noNodeTotal ) );
-
-	printf("DEBUG levelArray : %d \n", noNodeTotal);
 
 	end_time = gettime_ms();
 	d_malloc_time += end_time - start_time;

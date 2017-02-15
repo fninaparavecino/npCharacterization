@@ -206,7 +206,11 @@ int convertCSR()
 	memset(graph.frontier, 0, sizeof(char)*noNodeTotal);
 	memset(graph.update, 0, sizeof(char)*noNodeTotal);
 	memset(graph.visited, 0, sizeof(char)*noNodeTotal);
-	memset(graph.keyArray, INT_MAX, sizeof(int)*noNodeTotal);
+
+	// memset for keyArray with INT_MAX
+	for (size_t i = 0; i < noNodeTotal; i++) {
+		graph.keyArray[i] = INT_MAX;
+	}
 
 	startingPos = 0;
 	noEdgePerNode = 0;

@@ -1,5 +1,7 @@
 #include "prim.h"
 
+#define N 1
+
 using namespace std;
 
 CONF config;
@@ -34,12 +36,7 @@ void usage() {
 	fprintf(stderr, "                 1 - DIMACS10\n");
 	fprintf(stderr, "                 2 - SLNDC\n");
 	fprintf(stderr, "    --solution,-s <number>             specify the solution\n");
-	fprintf(stderr, "                 0 - GPU flat\n");
-	fprintf(stderr, "                 1 - GPU naive dynamic parallelism\n");
-	fprintf(stderr, "                 2 - GPU hierachical dynamic parallelism\n");
-	fprintf(stderr, "                 3 - warp-level consolidation\n");
-	fprintf(stderr, "                 4 - block-level consolidation\n");
-	fprintf(stderr, "                 5 - grid-level consolidation\n");
+	fprintf(stderr, "                 0 - GPU rec\n");
 	fprintf(stderr, "    --device,-e <number>               select the device\n");
 }
 
@@ -153,7 +150,7 @@ void primCPU(int *parent)
         // Pick the minimum key vertex from the set of vertices
         // not yet included in MST
         int u = minKey(key, mstBool);
-        printf("Chosen node: %d\n", u);
+        //printf("Chosen node: %d\n", u);
 
         // Add the picked vertex to the MST Set
         mstBool[u] = true;
@@ -163,13 +160,13 @@ void primCPU(int *parent)
         // included in MST
         for (int edgeId = graph.vertexArray[u]; edgeId < graph.vertexArray[u+1]; edgeId++){
           int v = graph.edgeArray[edgeId];
-          printf("Vertex %d has edge to %d\n", u, v);
+          //printf("Vertex %d has edge to %d\n", u, v);
           // graph[u][v] is non zero only for adjacent vertices of m
           // mstSet[v] is false for vertices not yet included in MST
           // Update the key only if graph[u][v] is smaller than key[v]
           //printf("Neighbor key[%d]: %d, graph.weight[%d]: %d", v, key[v], v, graph.weightArray[edgeId]);
           if (mstBool[v] == false && graph.weightArray[edgeId] <  key[v]){
-            printf("Edge added: %d with weight %d\n", v, graph.weightArray[edgeId]);
+            //printf("Edge added: %d with weight %d\n", v, graph.weightArray[edgeId]);
             parent[v]  = u, key[v] = graph.weightArray[edgeId];
           }
 
@@ -177,7 +174,7 @@ void primCPU(int *parent)
      }
 
      // print the constructed MST
-     printMST(parent);
+     //printMST(parent);
 }
 
 void setArrays(int size, int *arrays, int value)
@@ -252,7 +249,14 @@ int main(int argc, char* argv[])
   graph.levelArray[source] = -1;
   primGPU();
 
-  validateArrays(noNodeTotal, graph.levelArray, parentMST, "GPU bfs rec");
+  validateArrays(noNodeTotal, graph.levelArray, parentMST, "GPU prim rec");
+  if (VERBOSE) {
+    fprintf(stdout, "===MAIN=== :: CUDA runtime init:\t\t%.2lf ms.\n", init_time/N);
+    fprintf(stdout, "===MAIN=== :: CUDA device cudaMalloc:\t\t%.2lf ms.\n", d_malloc_time/N);
+    fprintf(stdout, "===MAIN=== :: CUDA H2D cudaMemcpy:\t\t%.2lf ms.\n", h2d_memcpy_time/N);
+    fprintf(stdout, "===MAIN=== :: CUDA kernel execution:\t\t%.2lf ms.\n", ker_exe_time/N);
+    fprintf(stdout, "===MAIN=== :: CUDA D2H cudaMemcpy:\t\t%.2lf ms.\n", d2h_memcpy_time/N);
+  }
 
 	//starts execution
 	printf("\n===MAIN=== :: [num_nodes,num_edges] = %u, %u\n", noNodeTotal, noEdgeTotal);
