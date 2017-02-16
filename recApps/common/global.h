@@ -41,6 +41,7 @@ struct _GRAPH_{
 	float *rankArray;
 	int *colorArray;
 	int *keyArray;
+	int *nodesVisited;
 };
 
 double gettime();

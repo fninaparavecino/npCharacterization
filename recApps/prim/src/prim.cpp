@@ -141,8 +141,8 @@ void primCPU(int *parent)
         key[i] = INT_MAX, mstBool[i] = false;
 
      // Always include first 1st vertex in MST.
-     key[0] = 0;     // Make key 0 so that this vertex is picked as first vertex
-     parent[0] = -1; // First node is always root of MST
+     key[source] = 0;     // Make key 0 so that this vertex is picked as first vertex
+     parent[source] = -1; // First node is always root of MST
 
      // The MST will have V vertices
      for (int count = 0; count < noNodeTotal-1; count++)
@@ -190,7 +190,7 @@ void validateArrays(int n, int *array1, int *array2, const char *message)
 	for (int node=0; node<n; node++){
 		if (array1[node]!=array2[node]){
 			printf("ERROR: validation error at %d: %s !\n", node, message);
-			printf("Node %d : %d v.s. %d\n", node, array1[node], array2[node]);
+			printf("Node %d: %d v.s. %d\n", node, array1[node], array2[node]);
 			flag = 0; break;
 		}
 	}
@@ -242,7 +242,11 @@ int main(int argc, char* argv[])
 
   int *parentMST = (int*) malloc(sizeof(int) * noNodeTotal);
   memset(parentMST, 0, noNodeTotal*sizeof(int));
+  double wall0, wall1;
+  wall0 = getWallTime();
   primCPU(parentMST);
+  wall1 = getWallTime();
+  printf("===MAIN=== :: Prim CPU performance: %.2f ms\n", wall1- wall0);
 
   // Call GPU
   graph.keyArray[source] = 0;

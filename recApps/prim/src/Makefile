@@ -1,6 +1,6 @@
 CC = nvcc
 #CC_FLAGS = --compiler-options '-fopenmp' -Xptxas=-v -arch=sm_20
-CC_FLAGS = --compiler-options '-fopenmp' -arch=sm_35 -rdc=true -lcudadevrt -O2 #-Xptxas=-v
+CC_FLAGS = --compiler-options '-fopenmp' -arch=compute_35 -code=sm_35 -rdc=true -lcudadevrt  #-Xptxas=-v
 
 #CC_FLAGS += -Xptxas=-v
 

@@ -201,11 +201,13 @@ int convertCSR()
 	graph.update = new char [noNodeTotal] ();
 	graph.visited = new char [noNodeTotal] ();
 	graph.keyArray = new int [noNodeTotal] ();
+	graph.nodesVisited = new int [1] ();
 	memset(graph.costArray, 0, sizeof(int)*noNodeTotal);
 	memset(graph.levelArray, 0, sizeof(int)*noNodeTotal);
 	memset(graph.frontier, 0, sizeof(char)*noNodeTotal);
 	memset(graph.update, 0, sizeof(char)*noNodeTotal);
 	memset(graph.visited, 0, sizeof(char)*noNodeTotal);
+	memset(graph.nodesVisited, 0, sizeof(int)*1);
 
 	// memset for keyArray with INT_MAX
 	for (size_t i = 0; i < noNodeTotal; i++) {
