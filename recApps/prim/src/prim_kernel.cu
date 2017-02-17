@@ -135,6 +135,60 @@ __global__ void primPhase1(int numNodes, int* nodesVisited, int* vertexArray, in
 
   //}
 }
+/***********************************************************
+        Prim Recursive version 2
+************************************************************/
+__global__ void primRecChildren(int node, int numNodes, int* vertexArray, int* edgeArray,
+                        int* weightArray, bool* visitedArray, int* keyArray, int* mstParent,
+                        int* nodesVisited){
+  int idx = threadIdx.x + blockIdx.x * blockDim.x;
+
+  if (idx > numNodes)
+    return;
+
+  //update visitedArray
+  visitedArray[node] = true;
+  atomicAdd(&nodesVisited[0], 1);
+
+
+  if (idx == 0)
+    printf("Node: %d visited[%d] = %d", node, node, visitedArray[node]);
+
+  int child = edgeArray[vertexArray[node] + idx];
+  int childId = vertexArray[node] + idx;
+  int childWeight = weightArray[vertexArray[node] + idx];
+
+  // set min to first child
+  int minChild = edgeArray[vertexArray[node]];
+  int minChildId = vertexArray[node];
+  int minChildWeight = weightArray[vertexArray[node]];
+
+  // find minChild among children
+  for (int i=1;i < blockDim.x && i < WARP_SIZE; i++){
+    int childShfl = __shfl(child, i);
+    int childIdShfl = __shfl(childId, i);
+    int weightShfl = __shfl(childWeight, i);
+
+    if (weightShfl < minChildWeight){
+      minChildWeight = weightShfl;
+      minChild = childShfl;
+      minChildId = childIdShfl;
+    }
+  }
+
+  // if Child explored is different than childSelected
+  if (child != minChild)
+    return;
+
+  if (visitedArray[minChild] == false && weightArray[minChildId] < keyArray[minChild]){
+    //printf("===GPU Kernel=== child selected: %d\n", minChild);
+    mstParent[minChild] = node;
+    keyArray[minChild] = weightArray[minChildId];
+    int grandChildren = vertexArray[minChild+1] - vertexArray[minChild];
+    primRec<<<1, grandChildren>>>(minChild, numNodes, vertexArray, edgeArray, weightArray, visitedArray, keyArray, mstParent);
+  }
+}
+
 // ----------------------------------------------------------
 // Implementation 0: Recursive MST using Prim's algorithm
 // ----------------------------------------------------------
@@ -205,8 +259,8 @@ void primWrapperControl()
   cudaEventCreate(&stop);
   cudaEventRecord(start, 0);
 
-  int minNode = source;
-  int minKey = graph.keyArray[source];
+  int minNode;
+  int minKey = INT_MAX;
 
   while(graph.nodesVisited[0] < noNodeTotal){
     for(int i=0; i< noNodeTotal; i++){
@@ -215,12 +269,17 @@ void primWrapperControl()
         minKey = graph.keyArray[i];
       }
     }
+    printf("Node to evaluate: %d, key: %d\n", minNode, minKey);
 
-    primRec<<<1, block_size>>>(minNode, noNodeTotal, d_vertexArray, d_edgeArray, d_weightArray, d_visitedArray, d_keyArray, d_levelArray);
-    cudaErrCheck( cudaDeviceSynchronize());
-    cudaErrCheck( cudaMemcpy( graph.visited, d_visitedArray, sizeof(char)*noNodeTotal, cudaMemcpyDeviceToHost) );
-    cudaErrCheck( cudaMemcpy( graph.keyArray, d_keyArray, sizeof(int)*noNodeTotal, cudaMemcpyDeviceToHost) );
-    cudaErrCheck( cudaMemcpy( graph.nodesVisited, d_nodesVisited, sizeof(int)*1, cudaMemcpyDeviceToHost) );
+    if (graph.keyArray[minNode] == false){
+      primRecChildren<<<1, block_size>>>(minNode, noNodeTotal, d_vertexArray, d_edgeArray, d_weightArray, d_visitedArray, d_keyArray, d_levelArray, d_nodesVisited);
+      cudaErrCheck( cudaDeviceSynchronize());
+      cudaErrCheck( cudaMemcpy( graph.visited, d_visitedArray, sizeof(char)*noNodeTotal, cudaMemcpyDeviceToHost) );
+      cudaErrCheck( cudaMemcpy( graph.keyArray, d_keyArray, sizeof(int)*noNodeTotal, cudaMemcpyDeviceToHost) );
+      cudaErrCheck( cudaMemcpy( graph.nodesVisited, d_nodesVisited, sizeof(int)*1, cudaMemcpyDeviceToHost) );
+    }
+
+    printf("===MAIN=== Node: %d visited[%d]: %d\n", minNode, minNode, graph.visited[minNode]);
   }
 
   cudaEventRecord(stop, 0);
@@ -311,6 +370,8 @@ void primGPU()
 			break;
     case 1: primWrapper2Phases(); // Prim GPU with 2 phases
       break;
+    case 2: primWrapperControl(); // Prim GPU with 2 phases
+        break;
 		default:
       printf("===ERROR=== Solution selected not available\n");
 			break;
