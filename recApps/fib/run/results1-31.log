@@ -1,0 +1,465 @@
+1
+Computing fib(1)
+Fib Rec
+	Time Performance: 0.000000 ms
+Fib Seq 
+	Time Performance: 0.000000 ms
+Fib Rec Memo
+	Time Performance: 0.000000 ms
+PASS: 	CPU Seq vs CPU Rec Memo !
+Launching fib_kernel (1 x 32)...
+	Parallel Kernel time: 0.02 ms
+PASS: CPU vs GPU !
+Launching fib_kernel_rec (1 x 1)...
+	Parallel Kernel time: 0.02 ms
+PASS: CPU vs GPURec !
+2
+Computing fib(2)
+Fib Rec
+	Time Performance: 0.000000 ms
+Fib Seq 
+	Time Performance: 0.000000 ms
+Fib Rec Memo
+	Time Performance: 0.000001 ms
+PASS: 	CPU Seq vs CPU Rec Memo !
+Launching fib_kernel (1 x 32)...
+	Parallel Kernel time: 0.02 ms
+PASS: CPU vs GPU !
+Launching fib_kernel_rec (1 x 1)...
+	Parallel Kernel time: 0.02 ms
+PASS: CPU vs GPURec !
+3
+Computing fib(3)
+Fib Rec
+	Time Performance: 0.000000 ms
+Fib Seq 
+	Time Performance: 0.000000 ms
+Fib Rec Memo
+	Time Performance: 0.000000 ms
+PASS: 	CPU Seq vs CPU Rec Memo !
+Launching fib_kernel (1 x 32)...
+	Parallel Kernel time: 0.02 ms
+PASS: CPU vs GPU !
+Launching fib_kernel_rec (1 x 1)...
+	Parallel Kernel time: 0.02 ms
+PASS: CPU vs GPURec !
+4
+Computing fib(4)
+Fib Rec
+	Time Performance: 0.000000 ms
+Fib Seq 
+	Time Performance: 0.000000 ms
+Fib Rec Memo
+	Time Performance: 0.000000 ms
+PASS: 	CPU Seq vs CPU Rec Memo !
+Launching fib_kernel (1 x 32)...
+	Parallel Kernel time: 0.03 ms
+PASS: CPU vs GPU !
+Launching fib_kernel_rec (1 x 1)...
+	Parallel Kernel time: 0.02 ms
+PASS: CPU vs GPURec !
+5
+Computing fib(5)
+Fib Rec
+	Time Performance: 0.000000 ms
+Fib Seq 
+	Time Performance: 0.000000 ms
+Fib Rec Memo
+	Time Performance: 0.000000 ms
+PASS: 	CPU Seq vs CPU Rec Memo !
+Launching fib_kernel (1 x 32)...
+	Parallel Kernel time: 0.03 ms
+PASS: CPU vs GPU !
+Launching fib_kernel_rec (1 x 1)...
+	Parallel Kernel time: 0.02 ms
+PASS: CPU vs GPURec !
+6
+Computing fib(6)
+Fib Rec
+	Time Performance: 0.000001 ms
+Fib Seq 
+	Time Performance: 0.000000 ms
+Fib Rec Memo
+	Time Performance: 0.000000 ms
+PASS: 	CPU Seq vs CPU Rec Memo !
+Launching fib_kernel (1 x 32)...
+	Parallel Kernel time: 0.04 ms
+PASS: CPU vs GPU !
+Launching fib_kernel_rec (1 x 1)...
+	Parallel Kernel time: 0.02 ms
+PASS: CPU vs GPURec !
+7
+Computing fib(7)
+Fib Rec
+	Time Performance: 0.000001 ms
+Fib Seq 
+	Time Performance: 0.000000 ms
+Fib Rec Memo
+	Time Performance: 0.000000 ms
+PASS: 	CPU Seq vs CPU Rec Memo !
+Launching fib_kernel (1 x 32)...
+	Parallel Kernel time: 0.03 ms
+PASS: CPU vs GPU !
+Launching fib_kernel_rec (1 x 1)...
+	Parallel Kernel time: 0.02 ms
+PASS: CPU vs GPURec !
+8
+Computing fib(8)
+Fib Rec
+	Time Performance: 0.000001 ms
+Fib Seq 
+	Time Performance: 0.000001 ms
+Fib Rec Memo
+	Time Performance: 0.000000 ms
+PASS: 	CPU Seq vs CPU Rec Memo !
+Launching fib_kernel (1 x 32)...
+	Parallel Kernel time: 0.03 ms
+PASS: CPU vs GPU !
+Launching fib_kernel_rec (1 x 1)...
+	Parallel Kernel time: 0.02 ms
+PASS: CPU vs GPURec !
+9
+Computing fib(9)
+Fib Rec
+	Time Performance: 0.000001 ms
+Fib Seq 
+	Time Performance: 0.000000 ms
+Fib Rec Memo
+	Time Performance: 0.000000 ms
+PASS: 	CPU Seq vs CPU Rec Memo !
+Launching fib_kernel (1 x 32)...
+	Parallel Kernel time: 0.03 ms
+PASS: CPU vs GPU !
+Launching fib_kernel_rec (1 x 1)...
+	Parallel Kernel time: 0.02 ms
+PASS: CPU vs GPURec !
+10
+Computing fib(10)
+Fib Rec
+	Time Performance: 0.000001 ms
+Fib Seq 
+	Time Performance: 0.000000 ms
+Fib Rec Memo
+	Time Performance: 0.000000 ms
+PASS: 	CPU Seq vs CPU Rec Memo !
+Launching fib_kernel (1 x 32)...
+	Parallel Kernel time: 0.03 ms
+PASS: CPU vs GPU !
+Launching fib_kernel_rec (1 x 1)...
+	Parallel Kernel time: 0.02 ms
+PASS: CPU vs GPURec !
+11
+Computing fib(11)
+Fib Rec
+	Time Performance: 0.000001 ms
+Fib Seq 
+	Time Performance: 0.000000 ms
+Fib Rec Memo
+	Time Performance: 0.000000 ms
+PASS: 	CPU Seq vs CPU Rec Memo !
+Launching fib_kernel (1 x 32)...
+	Parallel Kernel time: 0.03 ms
+PASS: CPU vs GPU !
+Launching fib_kernel_rec (1 x 1)...
+	Parallel Kernel time: 0.02 ms
+PASS: CPU vs GPURec !
+12
+Computing fib(12)
+Fib Rec
+	Time Performance: 0.000002 ms
+Fib Seq 
+	Time Performance: 0.000000 ms
+Fib Rec Memo
+	Time Performance: 0.000000 ms
+PASS: 	CPU Seq vs CPU Rec Memo !
+Launching fib_kernel (1 x 32)...
+	Parallel Kernel time: 0.04 ms
+PASS: CPU vs GPU !
+Launching fib_kernel_rec (1 x 1)...
+	Parallel Kernel time: 0.03 ms
+PASS: CPU vs GPURec !
+13
+Computing fib(13)
+Fib Rec
+	Time Performance: 0.000006 ms
+Fib Seq 
+	Time Performance: 0.000000 ms
+Fib Rec Memo
+	Time Performance: 0.000000 ms
+PASS: 	CPU Seq vs CPU Rec Memo !
+Launching fib_kernel (1 x 32)...
+	Parallel Kernel time: 0.03 ms
+PASS: CPU vs GPU !
+Launching fib_kernel_rec (1 x 1)...
+	Parallel Kernel time: 0.03 ms
+PASS: CPU vs GPURec !
+14
+Computing fib(14)
+Fib Rec
+	Time Performance: 0.000008 ms
+Fib Seq 
+	Time Performance: 0.000000 ms
+Fib Rec Memo
+	Time Performance: 0.000000 ms
+PASS: 	CPU Seq vs CPU Rec Memo !
+Launching fib_kernel (1 x 32)...
+	Parallel Kernel time: 0.03 ms
+PASS: CPU vs GPU !
+Launching fib_kernel_rec (1 x 1)...
+	Parallel Kernel time: 0.03 ms
+PASS: CPU vs GPURec !
+15
+Computing fib(15)
+Fib Rec
+	Time Performance: 0.000011 ms
+Fib Seq 
+	Time Performance: 0.000000 ms
+Fib Rec Memo
+	Time Performance: 0.000000 ms
+PASS: 	CPU Seq vs CPU Rec Memo !
+Launching fib_kernel (1 x 32)...
+	Parallel Kernel time: 0.04 ms
+PASS: CPU vs GPU !
+Launching fib_kernel_rec (1 x 1)...
+	Parallel Kernel time: 0.03 ms
+PASS: CPU vs GPURec !
+16
+Computing fib(16)
+Fib Rec
+	Time Performance: 0.000022 ms
+Fib Seq 
+	Time Performance: 0.000000 ms
+Fib Rec Memo
+	Time Performance: 0.000000 ms
+PASS: 	CPU Seq vs CPU Rec Memo !
+Launching fib_kernel (1 x 32)...
+	Parallel Kernel time: 0.04 ms
+PASS: CPU vs GPU !
+Launching fib_kernel_rec (1 x 1)...
+	Parallel Kernel time: 0.03 ms
+PASS: CPU vs GPURec !
+17
+Computing fib(17)
+Fib Rec
+	Time Performance: 0.000017 ms
+Fib Seq 
+	Time Performance: 0.000000 ms
+Fib Rec Memo
+	Time Performance: 0.000000 ms
+PASS: 	CPU Seq vs CPU Rec Memo !
+Launching fib_kernel (1 x 32)...
+	Parallel Kernel time: 0.03 ms
+PASS: CPU vs GPU !
+Launching fib_kernel_rec (1 x 1)...
+	Parallel Kernel time: 0.03 ms
+PASS: CPU vs GPURec !
+18
+Computing fib(18)
+Fib Rec
+	Time Performance: 0.000054 ms
+Fib Seq 
+	Time Performance: 0.000000 ms
+Fib Rec Memo
+	Time Performance: 0.000000 ms
+PASS: 	CPU Seq vs CPU Rec Memo !
+Launching fib_kernel (1 x 32)...
+	Parallel Kernel time: 0.04 ms
+PASS: CPU vs GPU !
+Launching fib_kernel_rec (1 x 1)...
+	Parallel Kernel time: 0.03 ms
+PASS: CPU vs GPURec !
+19
+Computing fib(19)
+Fib Rec
+	Time Performance: 0.000045 ms
+Fib Seq 
+	Time Performance: 0.000000 ms
+Fib Rec Memo
+	Time Performance: 0.000000 ms
+PASS: 	CPU Seq vs CPU Rec Memo !
+Launching fib_kernel (1 x 32)...
+	Parallel Kernel time: 0.04 ms
+PASS: CPU vs GPU !
+Launching fib_kernel_rec (1 x 1)...
+	Parallel Kernel time: 0.03 ms
+PASS: CPU vs GPURec !
+20
+Computing fib(20)
+Fib Rec
+	Time Performance: 0.000057 ms
+Fib Seq 
+	Time Performance: 0.000000 ms
+Fib Rec Memo
+	Time Performance: 0.000000 ms
+PASS: 	CPU Seq vs CPU Rec Memo !
+Launching fib_kernel (1 x 32)...
+	Parallel Kernel time: 0.04 ms
+PASS: CPU vs GPU !
+Launching fib_kernel_rec (1 x 1)...
+	Parallel Kernel time: 0.03 ms
+PASS: CPU vs GPURec !
+21
+Computing fib(21)
+Fib Rec
+	Time Performance: 0.000095 ms
+Fib Seq 
+	Time Performance: 0.000000 ms
+Fib Rec Memo
+	Time Performance: 0.000000 ms
+PASS: 	CPU Seq vs CPU Rec Memo !
+Launching fib_kernel (1 x 32)...
+	Parallel Kernel time: 0.04 ms
+PASS: CPU vs GPU !
+Launching fib_kernel_rec (1 x 1)...
+	Parallel Kernel time: 0.03 ms
+PASS: CPU vs GPURec !
+22
+Computing fib(22)
+Fib Rec
+	Time Performance: 0.000157 ms
+Fib Seq 
+	Time Performance: 0.000000 ms
+Fib Rec Memo
+	Time Performance: 0.000000 ms
+PASS: 	CPU Seq vs CPU Rec Memo !
+Launching fib_kernel (1 x 32)...
+	Parallel Kernel time: 0.04 ms
+PASS: CPU vs GPU !
+Launching fib_kernel_rec (1 x 1)...
+	Parallel Kernel time: 0.04 ms
+PASS: CPU vs GPURec !
+23
+Computing fib(23)
+Fib Rec
+	Time Performance: 0.000284 ms
+Fib Seq 
+	Time Performance: 0.000001 ms
+Fib Rec Memo
+	Time Performance: 0.000000 ms
+PASS: 	CPU Seq vs CPU Rec Memo !
+Launching fib_kernel (1 x 32)...
+	Parallel Kernel time: 0.04 ms
+PASS: CPU vs GPU !
+Launching fib_kernel_rec (1 x 1)...
+	Parallel Kernel time: 0.03 ms
+PASS: CPU vs GPURec !
+24
+Computing fib(24)
+Fib Rec
+	Time Performance: 0.000954 ms
+Fib Seq 
+	Time Performance: 0.000000 ms
+Fib Rec Memo
+	Time Performance: 0.000000 ms
+PASS: 	CPU Seq vs CPU Rec Memo !
+Launching fib_kernel (1 x 32)...
+	Parallel Kernel time: 0.04 ms
+PASS: CPU vs GPU !
+Launching fib_kernel_rec (1 x 1)...
+	Parallel Kernel time: 0.04 ms
+PASS: CPU vs GPURec !
+25
+Computing fib(25)
+Fib Rec
+	Time Performance: 0.000701 ms
+Fib Seq 
+	Time Performance: 0.000000 ms
+Fib Rec Memo
+	Time Performance: 0.000001 ms
+PASS: 	CPU Seq vs CPU Rec Memo !
+Launching fib_kernel (1 x 32)...
+	Parallel Kernel time: 0.04 ms
+PASS: CPU vs GPU !
+Launching fib_kernel_rec (1 x 1)...
+	Parallel Kernel time: 0.03 ms
+PASS: CPU vs GPURec !
+26
+Computing fib(26)
+Fib Rec
+	Time Performance: 0.002480 ms
+Fib Seq 
+	Time Performance: 0.000001 ms
+Fib Rec Memo
+	Time Performance: 0.000001 ms
+PASS: 	CPU Seq vs CPU Rec Memo !
+Launching fib_kernel (1 x 32)...
+	Parallel Kernel time: 0.04 ms
+PASS: CPU vs GPU !
+Launching fib_kernel_rec (1 x 1)...
+	Parallel Kernel time: 0.03 ms
+PASS: CPU vs GPURec !
+27
+Computing fib(27)
+Fib Rec
+	Time Performance: 0.003688 ms
+Fib Seq 
+	Time Performance: 0.000001 ms
+Fib Rec Memo
+	Time Performance: 0.000001 ms
+PASS: 	CPU Seq vs CPU Rec Memo !
+Launching fib_kernel (1 x 32)...
+	Parallel Kernel time: 0.04 ms
+PASS: CPU vs GPU !
+Launching fib_kernel_rec (1 x 1)...
+	Parallel Kernel time: 0.03 ms
+PASS: CPU vs GPURec !
+28
+Computing fib(28)
+Fib Rec
+	Time Performance: 0.006496 ms
+Fib Seq 
+	Time Performance: 0.000000 ms
+Fib Rec Memo
+	Time Performance: 0.000000 ms
+PASS: 	CPU Seq vs CPU Rec Memo !
+Launching fib_kernel (1 x 32)...
+	Parallel Kernel time: 0.04 ms
+PASS: CPU vs GPU !
+Launching fib_kernel_rec (1 x 1)...
+	Parallel Kernel time: 0.03 ms
+PASS: CPU vs GPURec !
+29
+Computing fib(29)
+Fib Rec
+	Time Performance: 0.009732 ms
+Fib Seq 
+	Time Performance: 0.000001 ms
+Fib Rec Memo
+	Time Performance: 0.000001 ms
+PASS: 	CPU Seq vs CPU Rec Memo !
+Launching fib_kernel (1 x 32)...
+	Parallel Kernel time: 0.04 ms
+PASS: CPU vs GPU !
+Launching fib_kernel_rec (1 x 1)...
+	Parallel Kernel time: 0.03 ms
+PASS: CPU vs GPURec !
+30
+Computing fib(30)
+Fib Rec
+	Time Performance: 0.008648 ms
+Fib Seq 
+	Time Performance: 0.000001 ms
+Fib Rec Memo
+	Time Performance: 0.000001 ms
+PASS: 	CPU Seq vs CPU Rec Memo !
+Launching fib_kernel (1 x 32)...
+	Parallel Kernel time: 0.04 ms
+PASS: CPU vs GPU !
+Launching fib_kernel_rec (1 x 1)...
+	Parallel Kernel time: 0.03 ms
+PASS: CPU vs GPURec !
+31
+Computing fib(31)
+Fib Rec
+	Time Performance: 0.012163 ms
+Fib Seq 
+	Time Performance: 0.000001 ms
+Fib Rec Memo
+	Time Performance: 0.000000 ms
+PASS: 	CPU Seq vs CPU Rec Memo !
+Launching fib_kernel (1 x 32)...
+	Parallel Kernel time: 0.04 ms
+PASS: CPU vs GPU !
+Launching fib_kernel_rec (1 x 1)...
+	Parallel Kernel time: 0.03 ms
+PASS: CPU vs GPURec !
