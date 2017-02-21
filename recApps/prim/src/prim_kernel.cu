@@ -138,21 +138,19 @@ __global__ void primPhase1(int numNodes, int* nodesVisited, int* vertexArray, in
 /***********************************************************
         Prim Recursive version 2
 ************************************************************/
-__global__ void primRecChildren(int node, int numNodes, int* vertexArray, int* edgeArray,
+__global__ void primRecChildren(int node, int numChildren, int* vertexArray, int* edgeArray,
                         int* weightArray, bool* visitedArray, int* keyArray, int* mstParent,
                         int* nodesVisited){
   int idx = threadIdx.x + blockIdx.x * blockDim.x;
 
-  if (idx > numNodes)
+  if (idx > numChildren)
     return;
 
   //update visitedArray
-  visitedArray[node] = true;
-  atomicAdd(&nodesVisited[0], 1);
-
-
-  if (idx == 0)
-    printf("Node: %d visited[%d] = %d", node, node, visitedArray[node]);
+  if (idx == 0){
+    visitedArray[node] = true;
+    atomicAdd(&nodesVisited[0], 1);
+  }
 
   int child = edgeArray[vertexArray[node] + idx];
   int childId = vertexArray[node] + idx;
@@ -160,32 +158,28 @@ __global__ void primRecChildren(int node, int numNodes, int* vertexArray, int* e
 
   // set min to first child
   int minChild = edgeArray[vertexArray[node]];
-  int minChildId = vertexArray[node];
   int minChildWeight = weightArray[vertexArray[node]];
 
   // find minChild among children
   for (int i=1;i < blockDim.x && i < WARP_SIZE; i++){
     int childShfl = __shfl(child, i);
-    int childIdShfl = __shfl(childId, i);
     int weightShfl = __shfl(childWeight, i);
 
-    if (weightShfl < minChildWeight){
+    if (visitedArray[childShfl] == false && weightShfl < minChildWeight){
       minChildWeight = weightShfl;
       minChild = childShfl;
-      minChildId = childIdShfl;
     }
   }
+  //printf("===GPU Kernel=== child selected: %d\n", minChild);
 
-  // if Child explored is different than childSelected
-  if (child != minChild)
-    return;
+  if (visitedArray[child] == false && weightArray[childId] < keyArray[child]){
+    mstParent[child] = node;
+    keyArray[child] = weightArray[childId];
 
-  if (visitedArray[minChild] == false && weightArray[minChildId] < keyArray[minChild]){
-    //printf("===GPU Kernel=== child selected: %d\n", minChild);
-    mstParent[minChild] = node;
-    keyArray[minChild] = weightArray[minChildId];
-    int grandChildren = vertexArray[minChild+1] - vertexArray[minChild];
-    primRec<<<1, grandChildren>>>(minChild, numNodes, vertexArray, edgeArray, weightArray, visitedArray, keyArray, mstParent);
+    if (child == minChild){ // only recursive call for the minChild
+      int grandChildren = vertexArray[minChild+1] - vertexArray[minChild];
+      primRecChildren<<<1, grandChildren>>>(minChild, grandChildren, vertexArray, edgeArray, weightArray, visitedArray, keyArray, mstParent, nodesVisited);
+    }
   }
 }
 
@@ -245,41 +239,32 @@ void primWrapper2Phases()
 // ----------------------------------------------------------
 // Implementation 2:
 // ----------------------------------------------------------
-void primWrapperControl()
+void primWrapperRecParent()
 {
   cudaEvent_t start, stop;
   float time;
-
-  // prepare GPU
-  int children = graph.vertexArray[source+1] - graph.vertexArray[source];
-
-  unsigned block_size = min (children, THREADS_PER_BLOCK);
-
   cudaEventCreate(&start);
   cudaEventCreate(&stop);
   cudaEventRecord(start, 0);
 
-  int minNode;
-  int minKey = INT_MAX;
-
   while(graph.nodesVisited[0] < noNodeTotal){
+    int minNode;
+    int minKey = INT_MAX;
+
     for(int i=0; i< noNodeTotal; i++){
       if (graph.visited[i] == false && graph.keyArray[i] < minKey){
         minNode = i;
         minKey = graph.keyArray[i];
       }
     }
-    printf("Node to evaluate: %d, key: %d\n", minNode, minKey);
+    int children = graph.vertexArray[minNode+1] - graph.vertexArray[minNode];
+    unsigned block_size = min (children, THREADS_PER_BLOCK);
 
-    if (graph.keyArray[minNode] == false){
-      primRecChildren<<<1, block_size>>>(minNode, noNodeTotal, d_vertexArray, d_edgeArray, d_weightArray, d_visitedArray, d_keyArray, d_levelArray, d_nodesVisited);
-      cudaErrCheck( cudaDeviceSynchronize());
-      cudaErrCheck( cudaMemcpy( graph.visited, d_visitedArray, sizeof(char)*noNodeTotal, cudaMemcpyDeviceToHost) );
-      cudaErrCheck( cudaMemcpy( graph.keyArray, d_keyArray, sizeof(int)*noNodeTotal, cudaMemcpyDeviceToHost) );
-      cudaErrCheck( cudaMemcpy( graph.nodesVisited, d_nodesVisited, sizeof(int)*1, cudaMemcpyDeviceToHost) );
-    }
-
-    printf("===MAIN=== Node: %d visited[%d]: %d\n", minNode, minNode, graph.visited[minNode]);
+    primRecChildren<<<1, block_size>>>(minNode, children, d_vertexArray, d_edgeArray, d_weightArray, d_visitedArray, d_keyArray, d_levelArray, d_nodesVisited);
+    cudaErrCheck( cudaDeviceSynchronize());
+    cudaErrCheck( cudaMemcpy( graph.visited, d_visitedArray, sizeof(char)*noNodeTotal, cudaMemcpyDeviceToHost) );
+    cudaErrCheck( cudaMemcpy( graph.keyArray, d_keyArray, sizeof(int)*noNodeTotal, cudaMemcpyDeviceToHost) );
+    cudaErrCheck( cudaMemcpy( graph.nodesVisited, d_nodesVisited, sizeof(int)*1, cudaMemcpyDeviceToHost) );
   }
 
   cudaEventRecord(stop, 0);
@@ -370,7 +355,7 @@ void primGPU()
 			break;
     case 1: primWrapper2Phases(); // Prim GPU with 2 phases
       break;
-    case 2: primWrapperControl(); // Prim GPU with 2 phases
+    case 2: primWrapperRecParent(); // Prim GPU using DP and recursive for children exploration
         break;
 		default:
       printf("===ERROR=== Solution selected not available\n");

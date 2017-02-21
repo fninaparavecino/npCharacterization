@@ -253,6 +253,7 @@ int main(int argc, char* argv[])
   graph.levelArray[source] = -1;
   primGPU();
 
+  //printMST(graph.levelArray);
   validateArrays(noNodeTotal, graph.levelArray, parentMST, "GPU prim rec");
   if (VERBOSE) {
     fprintf(stdout, "===MAIN=== :: CUDA runtime init:\t\t%.2lf ms.\n", init_time/N);
