@@ -48,7 +48,7 @@ int parse_arguments(int argc, char** argv, int *n) {
 
     return 1;
 }
-long long int fib(int n){
+long long int fib(long long int n){
     if (n == 0){
         return 0;
     }
@@ -139,15 +139,25 @@ int main(int argc, char** argv){
     // Verify results
     verifyArrays(n+1, arrayNSeq, arrayN, "CPU vs GPU");
 
-    // Call Rec GPU Kernel
-    unsigned long int* arrayNGPURec = (unsigned long int*)malloc((n+1)*sizeof(unsigned long int));
-    memset(arrayNGPURec, 0, (n+1)*sizeof(unsigned long int));
-    arrayNGPURec[0] = 0; arrayNGPURec[1] = 1;
-    fibGPURec(n, arrayNGPURec);
+    // // Call Rec GPU Kernel
+    // unsigned long int* arrayNGPURec = (unsigned long int*)malloc((n+1)*sizeof(unsigned long int));
+    // memset(arrayNGPURec, 0, (n+1)*sizeof(unsigned long int));
+    // arrayNGPURec[0] = 0; arrayNGPURec[1] = 1;
+    // fibGPURec(n, arrayNGPURec);
+    // // Verify results
+    // verifyArrays(n+1, arrayNSeq, arrayNGPURec, "CPU vs GPURec");
 
+    // Call Rec GPU Kernel
+    unsigned long int* arrayNGPUParRec = (unsigned long int*)malloc((n+1)*sizeof(unsigned long int));
+    memset(arrayNGPUParRec, 0, (n+1)*sizeof(unsigned long int));
+    arrayNGPUParRec[0] = 0; arrayNGPUParRec[1] = 1;
+    fibGPUParRec(n, arrayNGPUParRec);
     // Verify results
-    verifyArrays(n+1, arrayNSeq, arrayNGPURec, "CPU vs GPURec");
+    verifyArrays(n+1, arrayNSeq, arrayNGPUParRec, "CPU vs GPUParRec");
+
     // Free memory
-    free(arrayN); free(arrayNSeq); free(arrayNGPURec);
+    free(arrayN); free(arrayNSeq);
+    // free(arrayNGPURec);
+    free(arrayNGPUParRec);
     return 0;
 }
