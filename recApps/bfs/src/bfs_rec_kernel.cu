@@ -133,30 +133,33 @@ __global__ void bfs_kernel_rec( int node, int *vertexArray, int *edgeArray, int 
 }
 
 // Recursive DFS Optimized
-__global__ void bfs_kernel_recOptimized( int node, int *vertexArray, int *edgeArray, int *levelArray){
+__global__ void bfs_kernel_recOptimized( int level, int num_nodes, int *vertexArray, int *edgeArray, int *levelArray){
 
-#if (PROFILE_GPU!=0)
-		if (threadIdx.x+blockDim.x*blockIdx.x==0) atomicInc(&nested_calls, INF);
-#endif
-
+	int next_level;
 	unsigned tid = threadIdx.x + blockDim.x * blockIdx.x;
-	int total_neighbors = vertexArray[node+1] - vertexArray[node];
-	if (tid > total_neighbors)
+	int node = tid;
+	int visited = 0;
+
+
+	if (node > num_nodes || levelArray[node] < level)
 		return;
 
-	int level_value = levelArray[node];
-	int neighbor = edgeArray[vertexArray[node] + tid];
-	if (levelArray[neighbor]==UNDEFINED || levelArray[neighbor]>(level_value+1)){
-		levelArray[neighbor] = level_value + 1;
-		// call recursive child kernel
-		//unsigned old_level = atomicMin(&levelArray[neighbor], level_value + 1);
-		//if (old_level == levelArray[neighbor]){
-			int blockChild = vertexArray[neighbor+1] - vertexArray[neighbor];
-			blockChild = min(blockChild, THREADS_PER_BLOCK);
-			if (blockChild!=0)
-				bfs_kernel_rec<<<1, blockChild>>>( neighbor, vertexArray, edgeArray, levelArray);
-		//}
-		//cudaDeviceSynchronize();
+	if(levelArray[node] == level){
+		next_level = level+1;
+		// printf("node: %d, level: %d\n", node, level);
+		for (int edge=vertexArray[node]; edge<vertexArray[node+1]; edge++){
+			int neighbor=edgeArray[edge];
+			if (levelArray[neighbor]==UNDEFINED || levelArray[neighbor] > next_level){
+				// printf("For node: %d, neigbor: %d \n", node, neighbor);
+				levelArray[neighbor]=next_level;
+				visited++;
+			}
+		}
+	}
+	if (visited > 0){
+		unsigned block_size = min (num_nodes, THREADS_PER_BLOCK);
+		unsigned grid_size = (block_size+num_nodes-1)/block_size;
+		bfs_kernel_recOptimized<<<grid_size, block_size>>>(level+1, num_nodes, vertexArray, edgeArray, levelArray);
 	}
 }
 

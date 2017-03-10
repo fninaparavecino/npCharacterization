@@ -276,7 +276,7 @@ void bfs_rec()
 		printf("===> GPU #6 - BFS rec.\n");
 }
 // ----------------------------------------------------------
-// version #7 - flat parallelism with controlling from CPU
+// version #7 - flat parallelism  pure GPU
 // ----------------------------------------------------------
 
 void bfs_flat_pure_gpu()
@@ -313,6 +313,44 @@ void bfs_flat_pure_gpu()
 		printf("===> GPU #7 - flat pure gpu parallelism.\n");
 
 }
+
+// ----------------------------------------------------------
+// version #8 - GPU rec BFS Optimized
+// ----------------------------------------------------------
+
+void bfs_flat_rec_optimized()
+{
+	cudaEvent_t start, stop;
+	float time;
+	/* prepare GPU */
+	// bool queue_empty = false;
+	// bool *d_queue_empty;
+
+	//  cudaCheckError(  __FILE__, __LINE__, cudaMalloc( &d_queue_empty, sizeof(bool)) );
+  // printf("Grid configuration gridxblocks, %d x %d\n", NUM_BLOCKS_FLAT, THREADS_PER_BLOCK_FLAT);
+	unsigned level = 0;
+	unsigned block_size = min(THREADS_PER_BLOCK, noNodeTotal);
+	unsigned grid_size = (noNodeTotal+ block_size-1)/block_size;
+
+	//level-based traversal
+	// cudaCheckError(  __FILE__, __LINE__, cudaMemset( d_queue_empty, false, sizeof(bool)) );
+	cudaEventCreate(&start);
+	cudaEventCreate(&stop);
+	cudaEventRecord(start, 0);
+	bfs_kernel_recOptimized<<<1, 32>>>(level, noNodeTotal, d_vertexArray, d_edgeArray, d_levelArray);
+	cudaCheckError(  __FILE__, __LINE__, cudaGetLastError());
+	// cudaCheckError(  __FILE__, __LINE__, cudaMemcpy( &queue_empty, d_queue_empty, sizeof(bool), cudaMemcpyDeviceToHost) );
+	cudaCheckError(  __FILE__, __LINE__, cudaDeviceSynchronize());
+	cudaEventRecord(stop, 0);
+	cudaEventSynchronize(stop);
+	//Display time
+	cudaEventElapsedTime(&time, start, stop);
+	printf("\tParallel Job time: %.2f ms\n", time);
+
+	if (DEBUG)
+		printf("===> GPU #8 - rec gpu optimized parallelism.\n");
+
+}
 void BFS_REC_GPU()
 {
 	cudaCheckError( __FILE__, __LINE__, cudaSetDevice(config.device_num) );
@@ -340,6 +378,8 @@ void BFS_REC_GPU()
 				break;
 		case 7:  bfs_flat_pure_gpu();	//
 						break;
+		case 8:  bfs_flat_rec_optimized();	//
+										break;
 		default:
 			break;
 	}
