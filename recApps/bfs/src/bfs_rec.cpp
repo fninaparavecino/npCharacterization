@@ -230,25 +230,25 @@ int main(int argc, char* argv[])
 	printf("\tSequential bfs_cpu Job Time: %f ms\n", (wallS1-wallS0)*1000);
 	// for (int i=0; i<noNodeTotal; ++i) {
 	// 	printf("%d ", levelArray_cpu[i]);
-	// 	printf("%d ", graph.levelArray[i]);
+	// 	printf("%d \n", graph.levelArray[i]);
 	// } printf("\n");
 
-	validateArrays(noNodeTotal, graph.levelArray, levelArray_cpu, "GPU bfs rec");
+	validateArrays(noNodeTotal, graph.levelArray, levelArray_cpu, "GPU bfs");
 
 	// Initialize arrays
-	int *levelArray_cpu_rec = new int[noNodeTotal];
-	setArrays(noNodeTotal, levelArray_cpu_rec, UNDEFINED);
-	levelArray_cpu_rec[source] = 0;
-	queue<int> workingSet;
-	workingSet.push(source);
+	// int *levelArray_cpu_rec = new int[noNodeTotal];
+	// setArrays(noNodeTotal, levelArray_cpu_rec, UNDEFINED);
+	// levelArray_cpu_rec[source] = 0;
+	// queue<int> workingSet;
+	// workingSet.push(source);
 
 
-	wallS0 = getWallTime();
-	bfs_cpu_rec(levelArray_cpu_rec, &workingSet);
-	wallS1 = getWallTime();
-	printf("\tSequential bfs_cpu_rec Job Time: %f ms\n", (wallS1-wallS0)*1000);
-
-	validateArrays(noNodeTotal, levelArray_cpu, levelArray_cpu_rec, "'CPU' bfs rec");
+	// wallS0 = getWallTime();
+	// bfs_cpu_rec(levelArray_cpu_rec, &workingSet);
+	// wallS1 = getWallTime();
+	// printf("\tSequential bfs_cpu_rec Job Time: %f ms\n", (wallS1-wallS0)*1000);
+  //
+	// validateArrays(noNodeTotal, levelArray_cpu, levelArray_cpu_rec, "'CPU' bfs rec");
 
     if (VERBOSE) {
 		fprintf(stdout, "===MAIN=== :: CUDA runtime init:\t\t%.2lf ms.\n", init_time/N);

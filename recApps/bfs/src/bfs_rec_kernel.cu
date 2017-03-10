@@ -59,9 +59,85 @@ __global__ void bfs_kernel_flat(int level, int num_nodes, int *vertexArray, int 
 		}
 	}
 }
+// Implementation 7
+// pure flat BFS traversal
+__global__ void bfs_kernel_flat_gpu(int level, int num_nodes, int *vertexArray, int *edgeArray, int *levelArray){
+	// unsigned tid = threadIdx.x + blockDim.x * blockIdx.x;
+
+	int next_level;
+
+	// for (int level_value = 0; level_value < num_nodes; level_value++){
+	// 	for (int node = 0; node < num_nodes; node++){
+	// 		//printf("DEBUG node in gpu flat: %d \n", node);
+	// 		if(levelArray[node] == level_value){
+	// 			next_level = level_value+1;
+	// 			for (int edge=vertexArray[node]; edge<vertexArray[node+1]; edge++){
+	// 				int neighbor=edgeArray[edge];
+	// 				if (levelArray[neighbor]==UNDEFINED || levelArray[neighbor] > next_level){
+	// 					// printf("neighbors of %d: %d should have next_level %d\n", node, neighbor, next_level);
+	// 					levelArray[neighbor]=next_level;
+	// 					// queue_empty=false;
+	// 				}
+	// 			}
+	// 		}
+	// 	}
+	// }
+
+	bool queue_empty = false;
+	unsigned tid = threadIdx.x + blockDim.x * blockIdx.x;
+
+	while(!queue_empty){
+		queue_empty = true;
+		for (int node = tid; node < num_nodes; node += blockDim.x * gridDim.x){
+			if(node < num_nodes && levelArray[node] == level){
+				next_level = level+1;
+				for (int edge=vertexArray[node]; edge<vertexArray[node+1]; edge++){
+					int neighbor=edgeArray[edge];
+					if (levelArray[neighbor]==UNDEFINED || levelArray[neighbor] > next_level){
+						levelArray[neighbor]=next_level;
+						queue_empty=false;
+					}
+				}
+			}
+		}
+		level= next_level;
+	}
+
+}
 
 // Recursive DFS
 __global__ void bfs_kernel_rec( int node, int *vertexArray, int *edgeArray, int *levelArray){
+#if (PROFILE_GPU!=0)
+		if (threadIdx.x+blockDim.x*blockIdx.x==0) atomicInc(&nested_calls, INF);
+#endif
+
+	unsigned tid = threadIdx.x + blockDim.x * blockIdx.x;
+	int total_neighbors = vertexArray[node+1] - vertexArray[node];
+	if (tid > total_neighbors)
+		return;
+
+	int level_value = levelArray[node];
+	int neighbor = edgeArray[vertexArray[node] + tid];
+	if (levelArray[neighbor]==UNDEFINED || levelArray[neighbor]>(level_value+1)){
+		levelArray[neighbor] = level_value + 1;
+		// call recursive child kernel
+		//unsigned old_level = atomicMin(&levelArray[neighbor], level_value + 1);
+		//if (old_level == levelArray[neighbor]){
+			int blockChild = vertexArray[neighbor+1] - vertexArray[neighbor];
+			blockChild = min(blockChild, THREADS_PER_BLOCK);
+			if (blockChild!=0)
+				bfs_kernel_rec<<<1, blockChild>>>( neighbor, vertexArray, edgeArray, levelArray);
+		//}
+		//cudaDeviceSynchronize();
+	}
+}
+
+// Recursive DFS Optimized
+__global__ void bfs_kernel_recOptimized( int node, int *vertexArray, int *edgeArray, int *levelArray){
+
+#if (PROFILE_GPU!=0)
+		if (threadIdx.x+blockDim.x*blockIdx.x==0) atomicInc(&nested_calls, INF);
+#endif
 
 	unsigned tid = threadIdx.x + blockDim.x * blockIdx.x;
 	int total_neighbors = vertexArray[node+1] - vertexArray[node];

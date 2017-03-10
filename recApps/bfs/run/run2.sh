@@ -1,7 +1,7 @@
 #!/bin/bash
 
 BIN=../src/gpu-bfs-rec
-DATA_FILE=../input/data_test.gr
+DATA_FILE=../input/data_test2.gr
 
 	EXE=$BIN
 	$EXE -f 0 -i ${DATA_FILE} -v -s 0 #>> ${LOG_FILE}

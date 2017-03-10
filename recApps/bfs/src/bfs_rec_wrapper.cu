@@ -275,7 +275,44 @@ void bfs_rec()
 	if (DEBUG)
 		printf("===> GPU #6 - BFS rec.\n");
 }
+// ----------------------------------------------------------
+// version #7 - flat parallelism with controlling from CPU
+// ----------------------------------------------------------
 
+void bfs_flat_pure_gpu()
+{
+	cudaEvent_t start, stop;
+	float time;
+	/* prepare GPU */
+	// bool queue_empty = false;
+	// bool *d_queue_empty;
+
+	// cudaCheckError(  __FILE__, __LINE__, cudaMalloc( &d_queue_empty, sizeof(bool)) );
+  printf("Grid configuration gridxblocks, %d x %d\n", NUM_BLOCKS_FLAT, THREADS_PER_BLOCK_FLAT);
+	unsigned level = 0;
+
+	//level-based traversal
+	// while (!queue_empty){
+		// cudaCheckError(  __FILE__, __LINE__, cudaMemset( d_queue_empty, true, sizeof(bool)) );
+		cudaEventCreate(&start);
+		cudaEventCreate(&stop);
+		cudaEventRecord(start, 0);
+		bfs_kernel_flat_gpu<<<1, 1>>>(level, noNodeTotal, d_vertexArray, d_edgeArray, d_levelArray);
+		cudaCheckError(  __FILE__, __LINE__, cudaGetLastError());
+		// cudaCheckError(  __FILE__, __LINE__, cudaMemcpy( &queue_empty, d_queue_empty, sizeof(bool), cudaMemcpyDeviceToHost) );
+		cudaCheckError(  __FILE__, __LINE__, cudaDeviceSynchronize());
+		cudaEventRecord(stop, 0);
+		cudaEventSynchronize(stop);
+		//Display time
+		cudaEventElapsedTime(&time, start, stop);
+		printf("\tParallel Job time: %.2f ms\n", time);
+		// level++;
+	// }
+
+	if (DEBUG)
+		printf("===> GPU #7 - flat pure gpu parallelism.\n");
+
+}
 void BFS_REC_GPU()
 {
 	cudaCheckError( __FILE__, __LINE__, cudaSetDevice(config.device_num) );
@@ -301,6 +338,8 @@ void BFS_REC_GPU()
 			break;
 		case 6:  bfs_rec();	//
 				break;
+		case 7:  bfs_flat_pure_gpu();	//
+						break;
 		default:
 			break;
 	}
