@@ -13,11 +13,11 @@
 #define GPU_PROFILE
 
 #ifdef GPU_PROFILE
-// records the number of kerbel calls performed
+// records the number of kernel calls performed
 __device__ unsigned nested_calls = 0;
 
 __global__ void gpu_statistics(unsigned solution){
-	printf("====> GPU #%u - number of kernel calls:%u\n",solution, nested_calls);
+	printf("====> GPU #%u - number of kernel calls: %u\n",solution, nested_calls);
 }
 
 __global__ void reset_gpu_statistics(){
@@ -59,13 +59,17 @@ __global__ void bfs_kernel_flat(int level, int num_nodes, int *vertexArray, int 
 		}
 	}
 }
+
 // Implementation 7
 // pure flat BFS traversal
 __global__ void bfs_kernel_flat_gpu(int level, int num_nodes, int *vertexArray, int *edgeArray, int *levelArray){
-	// unsigned tid = threadIdx.x + blockDim.x * blockIdx.x;
+	unsigned tid = threadIdx.x + blockDim.x * blockIdx.x;
+	#if (PROFILE_GPU!=0)
+			if (tid==0) atomicInc(&nested_calls, INF);
+	#endif
+
 
 	int next_level;
-
 	// for (int level_value = 0; level_value < num_nodes; level_value++){
 	// 	for (int node = 0; node < num_nodes; node++){
 	// 		//printf("DEBUG node in gpu flat: %d \n", node);
@@ -76,16 +80,14 @@ __global__ void bfs_kernel_flat_gpu(int level, int num_nodes, int *vertexArray, 
 	// 				if (levelArray[neighbor]==UNDEFINED || levelArray[neighbor] > next_level){
 	// 					// printf("neighbors of %d: %d should have next_level %d\n", node, neighbor, next_level);
 	// 					levelArray[neighbor]=next_level;
-	// 					// queue_empty=false;
 	// 				}
 	// 			}
 	// 		}
 	// 	}
+	// 	level = next_level;
 	// }
 
 	bool queue_empty = false;
-	unsigned tid = threadIdx.x + blockDim.x * blockIdx.x;
-
 	while(!queue_empty){
 		queue_empty = true;
 		for (int node = tid; node < num_nodes; node += blockDim.x * gridDim.x){
@@ -102,7 +104,6 @@ __global__ void bfs_kernel_flat_gpu(int level, int num_nodes, int *vertexArray, 
 		}
 		level= next_level;
 	}
-
 }
 
 // Recursive DFS
@@ -135,31 +136,43 @@ __global__ void bfs_kernel_rec( int node, int *vertexArray, int *edgeArray, int 
 // Recursive DFS Optimized
 __global__ void bfs_kernel_recOptimized( int level, int num_nodes, int *vertexArray, int *edgeArray, int *levelArray){
 
-	int next_level;
-	unsigned tid = threadIdx.x + blockDim.x * blockIdx.x;
-	int node = tid;
-	int visited = 0;
+#ifdef GPU_PROFILE
+		if (threadIdx.x+blockDim.x*blockIdx.x==0) atomicInc(&nested_calls, INF);
+#endif
 
+	int node = threadIdx.x + blockDim.x * blockIdx.x;
+	int visited = 0;
 
 	if (node > num_nodes || levelArray[node] < level)
 		return;
 
+#if (STREAMS!=0)
+		cudaStream_t s[STREAMS];
+		for (int i=0; i<STREAMS; ++i)  cudaStreamCreateWithFlags(&s[i], cudaStreamNonBlocking);
+#endif
+
 	if(levelArray[node] == level){
-		next_level = level+1;
+		int next_level = level+1;
 		// printf("node: %d, level: %d\n", node, level);
 		for (int edge=vertexArray[node]; edge<vertexArray[node+1]; edge++){
 			int neighbor=edgeArray[edge];
-			if (levelArray[neighbor]==UNDEFINED || levelArray[neighbor] > next_level){
+			int levelNeighbor = levelArray[neighbor];
+			if (levelNeighbor==UNDEFINED || levelNeighbor > next_level){
 				// printf("For node: %d, neigbor: %d \n", node, neighbor);
 				levelArray[neighbor]=next_level;
 				visited++;
 			}
 		}
 	}
+
 	if (visited > 0){
 		unsigned block_size = min (num_nodes, THREADS_PER_BLOCK);
 		unsigned grid_size = (block_size+num_nodes-1)/block_size;
+#if (STREAMS!=0)
+		bfs_kernel_recOptimized<<<grid_size, block_size, 0, s[threadIdx.x%STREAMS]>>>(level+1, num_nodes, vertexArray, edgeArray, levelArray);
+#else
 		bfs_kernel_recOptimized<<<grid_size, block_size>>>(level+1, num_nodes, vertexArray, edgeArray, levelArray);
+#endif
 	}
 }
 
@@ -511,10 +524,10 @@ __global__ void bfs_kernel_dp_grid_cons(int *vertexArray, int *edgeArray, int *l
 {
 	unsigned int bid = blockIdx.x; //+ blockIdx.y*gridDim.x; // 1-Dimensional grid configuration
 	unsigned int t_idx;
-	__shared__ unsigned int *sh_buffer;
-	__shared__ unsigned int sh_idx;
-	__shared__ unsigned int ori_idx;
-	__shared__ unsigned int offset;
+	// __shared__ unsigned int *sh_buffer;
+	// __shared__ unsigned int sh_idx;
+	// __shared__ unsigned int ori_idx;
+	// __shared__ unsigned int offset;
 	for ( ; bid<*qidx; bid += gridDim.x ) {
 		int node = queue[bid];
 

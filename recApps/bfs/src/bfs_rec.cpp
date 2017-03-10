@@ -42,6 +42,9 @@ void usage() {
 	fprintf(stderr, "                 3 - warp-level consolidation\n");
 	fprintf(stderr, "                 4 - block-level consolidation\n");
 	fprintf(stderr, "                 5 - grid-level consolidation\n");
+  fprintf(stderr, "                 6 - GPU non-naive only 32 edges\n");
+	fprintf(stderr, "                 7 - Optimized GPU flat\n");
+  fprintf(stderr, "                 8 - Optiized GPU NP\n");
 	fprintf(stderr, "    --device,-e <number>               select the device\n");
 }
 

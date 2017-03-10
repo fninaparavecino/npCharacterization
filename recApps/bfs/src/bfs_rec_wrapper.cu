@@ -14,14 +14,15 @@
 #endif
 
 #ifndef THREADS_PER_BLOCK // nested kernel block size
-#define THREADS_PER_BLOCK 64
+//#define THREADS_PER_BLOCK 64
+#define THREADS_PER_BLOCK 128
 #endif
 
 #ifndef CONSOLIDATE_LEVEL
 #define CONSOLIDATE_LEVEL 0
 #endif
 
-#define STREAMS 30
+#define STREAMS 0
 
 #include "bfs_rec_kernel.cu"
 
@@ -329,8 +330,8 @@ void bfs_flat_rec_optimized()
 	//  cudaCheckError(  __FILE__, __LINE__, cudaMalloc( &d_queue_empty, sizeof(bool)) );
   // printf("Grid configuration gridxblocks, %d x %d\n", NUM_BLOCKS_FLAT, THREADS_PER_BLOCK_FLAT);
 	unsigned level = 0;
-	unsigned block_size = min(THREADS_PER_BLOCK, noNodeTotal);
-	unsigned grid_size = (noNodeTotal+ block_size-1)/block_size;
+	// unsigned block_size = min(THREADS_PER_BLOCK, noNodeTotal);
+	// unsigned grid_size = (noNodeTotal+ block_size-1)/block_size;
 
 	//level-based traversal
 	// cudaCheckError(  __FILE__, __LINE__, cudaMemset( d_queue_empty, false, sizeof(bool)) );
@@ -379,7 +380,7 @@ void BFS_REC_GPU()
 		case 7:  bfs_flat_pure_gpu();	//
 						break;
 		case 8:  bfs_flat_rec_optimized();	//
-										break;
+					break;
 		default:
 			break;
 	}
