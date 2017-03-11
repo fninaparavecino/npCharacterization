@@ -107,7 +107,7 @@ void clean_gpu()
 }
 
 // ----------------------------------------------------------
-// version #1 - flat parallelism - level-based BFS traversal
+// version #0 - flat parallelism - level-based BFS traversal
 // ----------------------------------------------------------
 
 void bfs_flat_gpu()
@@ -118,26 +118,28 @@ void bfs_flat_gpu()
 	bool *d_queue_empty;
 
 	cudaCheckError(  __FILE__, __LINE__, cudaMalloc( &d_queue_empty, sizeof(bool)) );
-  printf("Grid configuration gridxblocks, %d x %d\n", NUM_BLOCKS_FLAT, THREADS_PER_BLOCK_FLAT);
+  // printf("Grid configuration gridxblocks, %d x %d\n", NUM_BLOCKS_FLAT, THREADS_PER_BLOCK_FLAT);
+	if (DEBUG)
+		printf("===> GPU #%d - flat parallelism, gridSize: %d, blockSize: %d\n", config.solution, 1, THREADS_PER_BLOCK_FLAT);
 	unsigned level = 0;
 
 	//level-based traversal
 	while (!queue_empty){
 		cudaCheckError(  __FILE__, __LINE__, cudaMemset( d_queue_empty, true, sizeof(bool)) );
 
-		bfs_kernel_flat<<<1, 32>>>(level,noNodeTotal, d_vertexArray, d_edgeArray, d_levelArray, d_queue_empty);
+		bfs_kernel_flat<<<1, THREADS_PER_BLOCK_FLAT>>>(level,noNodeTotal, d_vertexArray, d_edgeArray, d_levelArray, d_queue_empty);
 		cudaCheckError(  __FILE__, __LINE__, cudaGetLastError());
 		cudaCheckError(  __FILE__, __LINE__, cudaMemcpy( &queue_empty, d_queue_empty, sizeof(bool), cudaMemcpyDeviceToHost) );
 		level++;
 	}
 
 	if (DEBUG)
-		printf("===> GPU #1 - flat parallelism.\n");
+		printf("===> GPU #%d - flat parallelism.\n", config.solution);
 
 }
 
 // ----------------------------------------------------------
-// version #2 - dynamic parallelism - naive
+// version #1 - dynamic parallelism - naive
 // ----------------------------------------------------------
 void bfs_rec_dp_naive_gpu()
 {
@@ -147,6 +149,8 @@ void bfs_rec_dp_naive_gpu()
 
 	int children = graph.vertexArray[source+1]-graph.vertexArray[source];
 	unsigned block_size = min (children, THREADS_PER_BLOCK);
+	if (DEBUG)
+		printf("===> GPU #%d - nested parallelism naive gridSize: %d bockSize: %d.\n", config.solution, 1, block_size);
 	cudaEventCreate(&start);
 	cudaEventCreate(&stop);
 	cudaEventRecord(start, 0);
@@ -160,11 +164,11 @@ void bfs_rec_dp_naive_gpu()
 	printf("\tParallel Job time: %.2f ms", time);
 
 	if (DEBUG)
-		printf("===> GPU #2 - nested parallelism naive.\n");
+		printf("===> GPU #%d - nested parallelism naive.\n", config.solution);
 }
 
 // ----------------------------------------------------------
-// version #3 - dynamic parallelism - hierarchical
+// version #2 - dynamic parallelism - hierarchical
 // ----------------------------------------------------------
 void bfs_rec_dp_hier_gpu()
 {
@@ -174,11 +178,11 @@ void bfs_rec_dp_hier_gpu()
 	cudaCheckError(  __FILE__, __LINE__, cudaGetLastError());
 	cudaCheckError(  __FILE__, __LINE__, cudaDeviceSynchronize());
 	if (DEBUG)
-		printf("===> GPU #3 - nested parallelism hierarchical %f.\n", gettime_ms()-start_time);
+		printf("===> GPU #%d - nested parallelism hierarchical %f.\n", config.solution, gettime_ms()-start_time);
 }
 
 // ----------------------------------------------------------
-// version #4 - dynamic parallelism - consolidation
+// version #3 - dynamic parallelism - consolidation
 // ----------------------------------------------------------
 void bfs_rec_dp_cons_gpu()
 {
@@ -239,7 +243,7 @@ void bfs_rec_dp_cons_gpu()
 	cudaCheckError(  __FILE__, __LINE__, cudaDeviceSynchronize());
 
 	if (DEBUG)
-		printf("===> GPU #4 - nested parallelism consolidation %f.\n", end_time-start_time);
+		printf("===> GPU #%d - nested parallelism consolidation %f.\n", config.solution, end_time-start_time);
 	//gpu_print<<<1,1>>>(d_idx);
 	cudaCheckError( __FILE__, __LINE__, cudaFree(d_buffer) );
 	cudaCheckError( __FILE__, __LINE__, cudaFree(d_idx) );
@@ -261,6 +265,8 @@ void bfs_rec()
 
 	int children = graph.vertexArray[source+1]-graph.vertexArray[source];
 	unsigned block_size = min (children, THREADS_PER_BLOCK);
+	if (DEBUG)
+		printf("===> GPU #%d - BFS rec. gridSize: %d blockSize: %d\n", config.solution, 1, block_size);
 	cudaEventCreate(&start);
 	cudaEventCreate(&stop);
 	cudaEventRecord(start, 0);
@@ -274,7 +280,7 @@ void bfs_rec()
 	printf("\tParallel Job time: %.2f ms", time);
 
 	if (DEBUG)
-		printf("===> GPU #6 - BFS rec.\n");
+		printf("===> GPU #%d - BFS rec.\n", config.solution);
 }
 // ----------------------------------------------------------
 // version #7 - flat parallelism  pure GPU
@@ -289,7 +295,9 @@ void bfs_flat_pure_gpu()
 	// bool *d_queue_empty;
 
 	// cudaCheckError(  __FILE__, __LINE__, cudaMalloc( &d_queue_empty, sizeof(bool)) );
-  printf("Grid configuration gridxblocks, %d x %d\n", NUM_BLOCKS_FLAT, THREADS_PER_BLOCK_FLAT);
+  //printf("Grid configuration gridxblocks, %d x %d\n", NUM_BLOCKS_FLAT, THREADS_PER_BLOCK_FLAT);
+	if (DEBUG)
+		printf("===> GPU #%d - flat pure gpu parallelism. gridSize: 1, blockSize: 1\n", config.solution);
 	unsigned level = 0;
 
 	//level-based traversal
@@ -311,7 +319,7 @@ void bfs_flat_pure_gpu()
 	// }
 
 	if (DEBUG)
-		printf("===> GPU #7 - flat pure gpu parallelism.\n");
+		printf("===> GPU #%d - flat pure gpu parallelism.\n", config.solution);
 
 }
 
@@ -330,6 +338,8 @@ void bfs_flat_rec_optimized()
 	//  cudaCheckError(  __FILE__, __LINE__, cudaMalloc( &d_queue_empty, sizeof(bool)) );
   // printf("Grid configuration gridxblocks, %d x %d\n", NUM_BLOCKS_FLAT, THREADS_PER_BLOCK_FLAT);
 	unsigned level = 0;
+	if (DEBUG)
+		printf("===> GPU #%d - rec gpu optimized parallelism. gridSize: %d, blockSize: %d\n", config.solution, 1, 32);
 	// unsigned block_size = min(THREADS_PER_BLOCK, noNodeTotal);
 	// unsigned grid_size = (noNodeTotal+ block_size-1)/block_size;
 
@@ -349,7 +359,7 @@ void bfs_flat_rec_optimized()
 	printf("\tParallel Job time: %.2f ms\n", time);
 
 	if (DEBUG)
-		printf("===> GPU #8 - rec gpu optimized parallelism.\n");
+		printf("===> GPU #%d - rec gpu optimized parallelism.\n", config.solution);
 
 }
 void BFS_REC_GPU()
