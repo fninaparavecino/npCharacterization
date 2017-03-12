@@ -253,10 +253,11 @@ int main(int argc, char* argv[])
   setArrays(noNodeTotal, graph.keyArray, UNDEFINED);
   graph.keyArray[source] = 0;
   graph.levelArray[source] = -1;
+  printf("====> source: %d\n", source);
   primGPU();
 
   //printMST(graph.levelArray);
-  validateArrays(noNodeTotal, graph.levelArray, parentMST, "GPU prim rec");
+  validateArrays(noNodeTotal, parentMST, graph.levelArray,  "parentMST versus graph.levelArray");
   if (VERBOSE) {
     fprintf(stdout, "===MAIN=== :: CUDA runtime init:\t\t%.2lf ms.\n", init_time/N);
     fprintf(stdout, "===MAIN=== :: CUDA device cudaMalloc:\t\t%.2lf ms.\n", d_malloc_time/N);

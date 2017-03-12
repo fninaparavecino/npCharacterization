@@ -28,6 +28,22 @@ inline void cudaAssert(cudaError_t code, const char *file, int line, bool abort=
       if (abort) exit(code);
    }
 }
+
+template<class T>
+struct SharedMemory
+{
+  __device__ inline operator T *()
+  {
+    extern __shared__ int __smem[];
+    return (T *)__smem;
+  }
+
+  __device__ inline operator const T *() const
+  {
+    extern __shared__ int __smem[];
+    return (T *)__smem;
+  }
+};
 /***********************************************************
         Prim Recursive version 0
 ************************************************************/
@@ -207,19 +223,101 @@ __global__ void primNonNP(int numNodes, int* vertexArray, int* edgeArray,
 
     for (int edgeId = tid + vertexArray[minNode]; edgeId < vertexArray[minNode+1]; edgeId++){
       int v = edgeArray[edgeId];
-      //printf("Vertex %d has edge to %d\n", u, v);
-      // graph[u][v] is non zero only for adjacent vertices of m
-      // mstSet[v] is false for vertices not yet included in MST
-      // Update the key only if graph[u][v] is smaller than key[v]
-      //printf("Neighbor key[%d]: %d, graph.weight[%d]: %d", v, key[v], v, graph.weightArray[edgeId]);
       if (visitedArray[v] == false && weightArray[edgeId] <  keyArray[v]){
         //printf("Edge added: %d with weight %d\n", v, graph.weightArray[edgeId]);
         mstParent[v]  = minNode, keyArray[v] = weightArray[edgeId];
       }
     }
   }
+}
+/***********************************************************
+        Prim Recursive version 4
+************************************************************/
+__global__ void primNPOpt(int numNodes, int min, int* vertexArray, int* edgeArray,
+                        int* weightArray, bool* visitedArray, int* keyArray, int* mstParent,
+                        int* nodesVisited){
+  int tid = threadIdx.x + blockIdx.x * blockDim.x;
+
+  // //reduce to find minKey using shared memory
+  // int *sdata = SharedMemory<int>();
+  // int *sdataIndex = SharedMemory<int>();
+  //
+  // sdata[tid] = (i < numNodes) ? keyArray[i] : 0;
+  // int min = UNDEFINED;
+  // int minNode = -1;
+  // __syncthreads();
+  //
+  // // do reduction in shared mem
+  // for (unsigned int s=blockDim.x/2; s>0; s>>=1)
+  // {
+  //   if (tid < s){
+  //     if (sdata[tid] < min){
+  //       min = sdata[tid];
+  //       minNode = tid;
+  //     }
+  //     if (sdata[tid+s] < min){
+  //       min = sdata[tid+s];
+  //       minNode = tid+s;
+  //     }
+  //     sdata[tid] = min;
+  //     sdataIndex[tid] = minNode;
+  //   }
+  //   __syncthreads();
+  // }
+  //
+  // // choose min result
+  // if (tid == 0){
+  //   min = sdata[0];
+  //   minNode = sdataIndex[0];
+  //   printf("minNode %d with minKey: %d\n", minNode, min);
+  // }
+  if (tid > numNodes || keyArray[tid] != min)
+    return;
+
+
+  if (keyArray[tid] == min){
+    int minNode = tid;
+    min  = UNDEFINED;
+    visitedArray[minNode] = true;
+    atomicAdd(&nodesVisited[0], 1); // to control to visit all nodes
+    // printf("minNode %d with minKey: %d\n", minNode, keyArray[minNode]);
+
+    for (int edgeId = vertexArray[minNode]; edgeId < vertexArray[minNode+1]; edgeId++){
+      int v = edgeArray[edgeId];
+      // printf("Neighbor key[%d]: %d, graph.weight[%d]: %d\n", v, keyArray[v], v, weightArray[edgeId]);
+      if (visitedArray[v] == false && weightArray[edgeId] <  keyArray[v]){
+        // printf("Edge added: %d with weight %d\n", v, weightArray[edgeId]);
+        mstParent[v]  = minNode, keyArray[v] = weightArray[edgeId];
+        if(keyArray[v] < min){
+          min = keyArray[v];
+        }
+        // printf("New min: %d\n", min);
+      }
+    }
+
+    __syncthreads();
+    if (visitedArray[0] < numNodes){
+      if (min == UNDEFINED) {// this path is not leading to any MST
+        for(int i = 0; i <numNodes; i++){
+          if (visitedArray[i] == false && keyArray[i] < min){
+            min = keyArray[i];
+          }
+        }
+      }
+      // printf("Launching kernel with min: %d\n", min);
+      int block_size = THREADS_PER_BLOCK;
+      if (numNodes < block_size)
+        block_size = numNodes;
+      int grid_size = (numNodes + block_size-1)/ block_size;
+      primNPOpt<<<grid_size, block_size >>>(numNodes, min, vertexArray, edgeArray,
+                              weightArray, visitedArray, keyArray, mstParent,
+                              nodesVisited);
+    }
+  }
 
 }
+
+
 // ----------------------------------------------------------
 // Implementation 0: Recursive MST using Prim's algorithm
 // ----------------------------------------------------------
@@ -246,7 +344,6 @@ void primRecWrapper()
 	if (DEBUG)
 		printf("===> GPU Prim rec.\n");
 }
-
 
 // ----------------------------------------------------------
 // Implementation 1: Prim's algorithm using 2 phases
@@ -325,6 +422,19 @@ void primWrapperNonNP()
   cudaErrCheck( cudaDeviceSynchronize());
   if (DEBUG)
   	printf("===> GPU Prim #%d Flat Non-NP implementation\n", config.solution);
+}
+
+// ----------------------------------------------------------
+// Implementation 4:
+// ----------------------------------------------------------
+void primWrapperNPOpt()
+{
+  int block_size = min(noNodeTotal, THREADS_PER_BLOCK);
+  int grid_size = (noNodeTotal+block_size+1)/block_size;
+  primNPOpt<<<grid_size, block_size>>>(noNodeTotal, 0, d_vertexArray, d_edgeArray, d_weightArray, d_visitedArray, d_keyArray, d_levelArray, d_nodesVisited);
+  cudaErrCheck( cudaDeviceSynchronize());
+  if (DEBUG)
+  	printf("===> GPU Prim #%d NP Opt implementation\n", config.solution);
 }
 void prepare_gpu()
 {
@@ -407,6 +517,8 @@ void primGPU()
     case 2: primWrapperRecParent(); // Prim GPU using DP and recursive for children exploration
         break;
     case 3: primWrapperNonNP(); // Prim GPU flat NonNP
+            break;
+    case 4: primWrapperNPOpt(); // Prim GPU flat NonNP
             break;
 		default:
       printf("===ERROR=== Solution selected not available\n");
