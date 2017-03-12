@@ -102,13 +102,13 @@ int parse_arguments(int argc, char** argv) {
 	return 1;
 }
 
-int minKey(int key[], bool mstSet[])
+int minKey(int key[], bool mstBool[])
 {
    // Initialize min value
    int min = INT_MAX, min_index;
 
    for (int v = 0; v < noNodeTotal; v++)
-     if (mstSet[v] == false && key[v] < min)
+     if (mstBool[v] == false && key[v] < min)
          min = key[v], min_index = v;
 
    return min_index;
@@ -249,6 +249,8 @@ int main(int argc, char* argv[])
   printf("===MAIN=== :: Prim CPU performance: %.2f ms\n", wall1- wall0);
 
   // Call GPU
+  setArrays(noNodeTotal, graph.levelArray, UNDEFINED);
+  setArrays(noNodeTotal, graph.keyArray, UNDEFINED);
   graph.keyArray[source] = 0;
   graph.levelArray[source] = -1;
   primGPU();

@@ -178,11 +178,48 @@ __global__ void primRecChildren(int node, int numChildren, int* vertexArray, int
 
     if (child == minChild){ // only recursive call for the minChild
       int grandChildren = vertexArray[minChild+1] - vertexArray[minChild];
+      // if (grandChildren > 32)
+        // printf("====> grandChildren: %d\n", grandChildren);
       primRecChildren<<<1, grandChildren>>>(minChild, grandChildren, vertexArray, edgeArray, weightArray, visitedArray, keyArray, mstParent, nodesVisited);
     }
   }
 }
+/***********************************************************
+        Prim Recursive version 3
+************************************************************/
+__global__ void primNonNP(int numNodes, int* vertexArray, int* edgeArray,
+                        int* weightArray, bool* visitedArray, int* keyArray, int* mstParent,
+                        int* nodesVisited){
+  int tid = threadIdx.x + blockIdx.x * blockDim.x;
 
+  // compute minKey
+  while (nodesVisited[0] < numNodes){
+    int min = UNDEFINED;
+    int minNode;
+    for (int node=0; node <numNodes; node++){
+      if (visitedArray[node] == false && keyArray[node] < min){
+        min = keyArray[node];
+        minNode = node;
+      }
+    }
+    visitedArray[minNode] = true;
+    atomicAdd(&nodesVisited[0], 1); // to control to visit all nodes
+
+    for (int edgeId = tid + vertexArray[minNode]; edgeId < vertexArray[minNode+1]; edgeId++){
+      int v = edgeArray[edgeId];
+      //printf("Vertex %d has edge to %d\n", u, v);
+      // graph[u][v] is non zero only for adjacent vertices of m
+      // mstSet[v] is false for vertices not yet included in MST
+      // Update the key only if graph[u][v] is smaller than key[v]
+      //printf("Neighbor key[%d]: %d, graph.weight[%d]: %d", v, key[v], v, graph.weightArray[edgeId]);
+      if (visitedArray[v] == false && weightArray[edgeId] <  keyArray[v]){
+        //printf("Edge added: %d with weight %d\n", v, graph.weightArray[edgeId]);
+        mstParent[v]  = minNode, keyArray[v] = weightArray[edgeId];
+      }
+    }
+  }
+
+}
 // ----------------------------------------------------------
 // Implementation 0: Recursive MST using Prim's algorithm
 // ----------------------------------------------------------
@@ -209,6 +246,7 @@ void primRecWrapper()
 	if (DEBUG)
 		printf("===> GPU Prim rec.\n");
 }
+
 
 // ----------------------------------------------------------
 // Implementation 1: Prim's algorithm using 2 phases
@@ -276,6 +314,17 @@ void primWrapperRecParent()
 
   if (DEBUG)
   	printf("===> GPU Prim rec.\n");
+}
+
+// ----------------------------------------------------------
+// Implementation 3:
+// ----------------------------------------------------------
+void primWrapperNonNP()
+{
+  primNonNP<<<1, 1>>>(noNodeTotal, d_vertexArray, d_edgeArray, d_weightArray, d_visitedArray, d_keyArray, d_levelArray, d_nodesVisited);
+  cudaErrCheck( cudaDeviceSynchronize());
+  if (DEBUG)
+  	printf("===> GPU Prim #%d Flat Non-NP implementation\n", config.solution);
 }
 void prepare_gpu()
 {
@@ -357,6 +406,8 @@ void primGPU()
       break;
     case 2: primWrapperRecParent(); // Prim GPU using DP and recursive for children exploration
         break;
+    case 3: primWrapperNonNP(); // Prim GPU flat NonNP
+            break;
 		default:
       printf("===ERROR=== Solution selected not available\n");
 			break;
