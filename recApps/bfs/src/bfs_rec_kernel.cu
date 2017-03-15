@@ -12,16 +12,34 @@
 
 #define GPU_PROFILE
 
+#define GPU_WORKEFFICIENCY
+
 #ifdef GPU_PROFILE
 // records the number of kernel calls performed
 __device__ unsigned nested_calls = 0;
+__device__ unsigned number_threadsCalls = 0;
 
 __global__ void gpu_statistics(unsigned solution){
 	printf("====> GPU #%u - number of kernel calls: %u\n",solution, nested_calls);
+	printf("====> GPU #%u - number of total threads calls: %u\n", solution, number_threadsCalls);
 }
 
 __global__ void reset_gpu_statistics(){
 	nested_calls = 0;
+	number_threadsCalls = 0;
+}
+#endif
+
+#ifdef GPU_WORKEFFICIENCY
+// records the number of kernel calls performed
+__device__ unsigned work_efficiency = 0;
+
+__global__ void gpu_statisticsWE(unsigned solution){
+	printf("====> GPU #%u - number of wasted work of threads: %u\n",solution, work_efficiency);
+}
+
+__global__ void reset_gpu_statisticsWE(){
+	work_efficiency = 0;
 }
 #endif
 
@@ -137,14 +155,23 @@ __global__ void bfs_kernel_rec( int node, int *vertexArray, int *edgeArray, int 
 __global__ void bfs_kernel_recOptimized( int level, int num_nodes, int *vertexArray, int *edgeArray, int *levelArray){
 
 #ifdef GPU_PROFILE
-		if (threadIdx.x+blockDim.x*blockIdx.x==0) atomicInc(&nested_calls, INF);
+		if (threadIdx.x+blockDim.x*blockIdx.x==0) {
+				atomicInc(&nested_calls, INF);
+				atomicAdd(&number_threadsCalls, blockDim.x*gridDim.x);
+		}
+
 #endif
 
 	int node = threadIdx.x + blockDim.x * blockIdx.x;
 	int visited = 0;
 
-	if (node > num_nodes || levelArray[node] < level)
+	if (node > num_nodes || levelArray[node] < level){
+// #ifdef GPU_WORKEFFICIENCY
+// 	atomicInc(&work_efficiency, INF);
+// #endif
 		return;
+	}
+
 
 #if (STREAMS!=0)
 		cudaStream_t s[STREAMS];
@@ -158,6 +185,10 @@ __global__ void bfs_kernel_recOptimized( int level, int num_nodes, int *vertexAr
 			int neighbor=edgeArray[edge];
 			int levelNeighbor = levelArray[neighbor];
 			if (levelNeighbor==UNDEFINED || levelNeighbor > next_level){
+#ifdef GPU_WORKEFFICIENCY
+					if (levelNeighbor > next_level)
+						atomicInc(&work_efficiency, INF);
+#endif
 				// printf("For node: %d, neigbor: %d \n", node, neighbor);
 				levelArray[neighbor]=next_level;
 				visited++;
@@ -179,7 +210,10 @@ __global__ void bfs_kernel_recOptimized( int level, int num_nodes, int *vertexAr
 // recursive naive NFS traversal
 __global__ void bfs_kernel_dp(int node, int *vertexArray, int *edgeArray, int *levelArray){
 #ifdef GPU_PROFILE
-	if (threadIdx.x+blockDim.x*blockIdx.x==0) atomicInc(&nested_calls, INF);
+	if (threadIdx.x+blockDim.x*blockIdx.x==0){
+		atomicInc(&nested_calls, INF);
+		atomicAdd(&number_threadsCalls, blockDim.x*gridDim.x);
+	}
 #endif
 
 #if (STREAMS!=0)
@@ -193,6 +227,9 @@ __global__ void bfs_kernel_dp(int node, int *vertexArray, int *edgeArray, int *l
 		int node_level = levelArray[node];
 		int child_level = levelArray[child];
 		if (child_level==UNDEFINED || child_level>(node_level+1)){
+#ifdef GPU_WORKEFFICIENCY
+			if (child_level > (node_level+1))	atomicInc(&work_efficiency, INF);
+#endif
 			unsigned old_level = atomicMin(&levelArray[child], node_level + 1);
 			if (old_level == child_level){
 				unsigned num_grandchildren = vertexArray[child+1]-vertexArray[child];

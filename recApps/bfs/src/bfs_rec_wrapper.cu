@@ -373,6 +373,11 @@ void BFS_REC_GPU()
 	cudaDeviceSynchronize();
 #endif
 
+#ifdef GPU_WORKEFFICIENCY
+	reset_gpu_statisticsWE<<<1,1>>>();
+	cudaDeviceSynchronize();
+#endif
+
 	start_time = gettime_ms();
 	switch (config.solution) {
 		case 0:  bfs_flat_gpu();	//
@@ -399,6 +404,10 @@ void BFS_REC_GPU()
 	ker_exe_time += end_time - start_time;
 #ifdef GPU_PROFILE
 	gpu_statistics<<<1,1>>>(config.solution);
+	cudaDeviceSynchronize();
+#endif
+#ifdef GPU_WORKEFFICIENCY
+	gpu_statisticsWE<<<1,1>>>(config.solution);
 	cudaDeviceSynchronize();
 #endif
 	//copy the level array from GPU to CPU;
