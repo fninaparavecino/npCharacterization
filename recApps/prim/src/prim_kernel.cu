@@ -10,6 +10,34 @@
 #define WARP_SIZE 32
 #endif
 
+#define GPU_PROFILE
+#define GPU_WORKEFFICIENCY
+#ifdef GPU_PROFILE
+// records the number of kernel calls performed
+__device__ unsigned nested_calls = 0;
+
+__global__ void gpu_statistics(unsigned solution){
+	printf("====> GPU #%u - number of kernel calls: %u\n",solution, nested_calls);
+}
+
+__global__ void reset_gpu_statistics(){
+	nested_calls = 0;
+}
+#endif
+
+#ifdef GPU_WORKEFFICIENCY
+// records the number of kernel calls performed
+__device__ unsigned work_efficiency = 0;
+
+__global__ void gpu_statisticsWE(unsigned solution){
+	printf("====> GPU #%u - number of wasted work of threads: %u\n",solution, work_efficiency);
+}
+
+__global__ void reset_gpu_statisticsWE(){
+	work_efficiency = 0;
+}
+#endif
+
 int *d_vertexArray;
 int *d_edgeArray;
 int *d_levelArray;
@@ -237,6 +265,9 @@ __global__ void primNPOpt(int numNodes, int min, int* vertexArray, int* edgeArra
                         int* weightArray, bool* visitedArray, int* keyArray, int* mstParent,
                         int* nodesVisited){
   int tid = threadIdx.x + blockIdx.x * blockDim.x;
+  #ifdef GPU_PROFILE
+  		if (threadIdx.x+blockDim.x*blockIdx.x==0) atomicInc(&nested_calls, INF);
+  #endif
 
   // //reduce to find minKey using shared memory
   // int *sdata = SharedMemory<int>();
@@ -286,6 +317,9 @@ __global__ void primNPOpt(int numNodes, int min, int* vertexArray, int* edgeArra
       int v = edgeArray[edgeId];
       // printf("Neighbor key[%d]: %d, graph.weight[%d]: %d\n", v, keyArray[v], v, weightArray[edgeId]);
       if (visitedArray[v] == false && weightArray[edgeId] <  keyArray[v]){
+        #ifdef GPU_WORKEFFICIENCY
+        		if (weightArray[edgeId] <  keyArray[v]) atomicInc(&work_efficiency, INF);
+        #endif
         // printf("Edge added: %d with weight %d\n", v, weightArray[edgeId]);
         mstParent[v]  = minNode, keyArray[v] = weightArray[edgeId];
         if(keyArray[v] < min){
@@ -313,6 +347,11 @@ __global__ void primNPOpt(int numNodes, int min, int* vertexArray, int* edgeArra
                               weightArray, visitedArray, keyArray, mstParent,
                               nodesVisited);
     }
+  }
+  else{
+    #ifdef GPU_WORKEFFICIENCY
+        atomicInc(&work_efficiency, INF);
+    #endif
   }
 
 }
@@ -431,6 +470,9 @@ void primWrapperNPOpt()
 {
   int block_size = min(noNodeTotal, THREADS_PER_BLOCK);
   int grid_size = (noNodeTotal+block_size+1)/block_size;
+  if (DEBUG)
+		printf("===> GPU #%d - rec gpu optimized parallelism. gridSize: %d, blockSize: %d\n", config.solution, grid_size, block_size);
+
   primNPOpt<<<grid_size, block_size>>>(noNodeTotal, 0, d_vertexArray, d_edgeArray, d_weightArray, d_visitedArray, d_keyArray, d_levelArray, d_nodesVisited);
   cudaErrCheck( cudaDeviceSynchronize());
   if (DEBUG)
@@ -529,6 +571,10 @@ void primGPU()
 	ker_exe_time += end_time - start_time;
 #ifdef GPU_PROFILE
 	gpu_statistics<<<1,1>>>(config.solution);
+	cudaDeviceSynchronize();
+#endif
+#ifdef GPU_WORKEFFICIENCY
+	gpu_statisticsWE<<<1,1>>>(config.solution);
 	cudaDeviceSynchronize();
 #endif
 	//copy the level array from GPU to CPU;
