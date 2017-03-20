@@ -413,6 +413,7 @@ int clear()
 	delete [] graph.weightArray;
 	delete [] graph.keyArray;
 	delete [] graph.frontier;
+	delete [] graph.visited;
 
 	return 0;
 }

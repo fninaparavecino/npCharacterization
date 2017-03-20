@@ -38,6 +38,8 @@ __global__ void reset_gpu_statisticsWE(){
 }
 #endif
 
+__device__ unsigned source_node = UNDEFINED;
+
 int *d_vertexArray;
 int *d_edgeArray;
 int *d_levelArray;
@@ -186,6 +188,9 @@ __global__ void primRecChildren(int node, int numChildren, int* vertexArray, int
                         int* weightArray, bool* visitedArray, int* keyArray, int* mstParent,
                         int* nodesVisited){
   int idx = threadIdx.x + blockIdx.x * blockDim.x;
+	#ifdef GPU_PROFILE
+  		if (threadIdx.x+blockDim.x*blockIdx.x==0) atomicInc(&nested_calls, INF);
+  #endif
 
   if (idx > numChildren)
     return;
@@ -240,20 +245,27 @@ __global__ void primNonNP(int numNodes, int* vertexArray, int* edgeArray,
   while (nodesVisited[0] < numNodes){
     int min = UNDEFINED;
     int minNode;
-    for (int node=0; node <numNodes; node++){
-      if (visitedArray[node] == false && keyArray[node] < min){
-        min = keyArray[node];
-        minNode = node;
-      }
-    }
-    visitedArray[minNode] = true;
-    atomicAdd(&nodesVisited[0], 1); // to control to visit all nodes
+		for (int node = tid; node < numNodes; node++){
+	    if (visitedArray[node] == false && keyArray[node] < min){
+	      min = keyArray[node];
+	      minNode = node;
+	    }
+	  }
+		__syncthreads();
 
-    for (int edgeId = tid + vertexArray[minNode]; edgeId < vertexArray[minNode+1]; edgeId++){
+		if (tid == 0){
+			source_node = minNode; // so every single thread can see it
+			visitedArray[source_node] = true;
+			atomicAdd(&nodesVisited[0], 1); // to control to visit all nodes
+		}
+		__syncthreads();
+
+    for (int edgeId = tid + vertexArray[source_node]; edgeId < vertexArray[source_node+1];
+			edgeId += blockDim.x * gridDim.x){
       int v = edgeArray[edgeId];
       if (visitedArray[v] == false && weightArray[edgeId] <  keyArray[v]){
         //printf("Edge added: %d with weight %d\n", v, graph.weightArray[edgeId]);
-        mstParent[v]  = minNode, keyArray[v] = weightArray[edgeId];
+        mstParent[v]  = source_node, keyArray[v] = weightArray[edgeId];
       }
     }
   }
@@ -355,6 +367,62 @@ __global__ void primNPOpt(int numNodes, int min, int* vertexArray, int* edgeArra
   }
 
 }
+// __global__ void primNPOpt(int numNodes, int min, int* vertexArray, int* edgeArray,
+//                         int* weightArray, bool* visitedArray, int* keyArray, int* mstParent,
+//                         int* nodesVisited){
+//   int tid = threadIdx.x + blockIdx.x * blockDim.x;
+// 	int minNode = UNDEFINED;
+// #ifdef GPU_PROFILE
+//   		if (threadIdx.x+blockDim.x*blockIdx.x==0) atomicInc(&nested_calls, INF);
+// #endif
+// 	if (keyArray[tid] == min){
+// 		int minNode = tid;
+// 		min  = UNDEFINED;
+// 		visitedArray[minNode] = true;
+// 		atomicAdd(&nodesVisited[0], 1); // to control to visit all nodes
+// 		// printf("minNode %d with minKey: %d\n", minNode, keyArray[minNode]);
+//
+// 		for (int edgeId = vertexArray[minNode]; edgeId < vertexArray[minNode+1]; edgeId++){
+// 			int v = edgeArray[edgeId];
+// 			// printf("Neighbor key[%d]: %d, graph.weight[%d]: %d\n", v, keyArray[v], v, weightArray[edgeId]);
+// 			if (visitedArray[v] == false && weightArray[edgeId] <  keyArray[v]){
+// #ifdef GPU_WORKEFFICIENCY
+// 					 if (weightArray[edgeId] <  keyArray[v]) atomicInc(&work_efficiency, INF);
+// #endif
+// 			 // printf("Edge added: %d with weight %d\n", v, weightArray[edgeId]);
+// 				mstParent[v]  = minNode, keyArray[v] = weightArray[edgeId];
+// 				if(keyArray[v] < min){
+// 					min = keyArray[v];
+// 				}
+// 			 // printf("New min: %d\n", min);
+// 			}
+// 		}
+//
+// 		__syncthreads();
+// 		if (visitedArray[0] < numNodes){
+// 		 if (min == UNDEFINED) {// this path is not leading to any MST
+// 			 for(int i = 0; i <numNodes; i++){
+// 				 if (visitedArray[i] == false && keyArray[i] < min){
+// 					 min = keyArray[i];
+// 				 }
+// 			 }
+// 		 }
+// 		 // printf("Launching kernel with min: %d\n", min);
+// 		 int block_size = THREADS_PER_BLOCK;
+// 		 if (numNodes < block_size)
+// 			 block_size = numNodes;
+// 		 int grid_size = (numNodes + block_size-1)/ block_size;
+// 		 primNPOpt<<<grid_size, block_size >>>(numNodes, min, vertexArray, edgeArray,
+// 														 weightArray, visitedArray, keyArray, mstParent,
+// 														 nodesVisited);
+// 		}
+// 	}
+// 	else{
+// 	 #ifdef GPU_WORKEFFICIENCY
+// 			 atomicInc(&work_efficiency, INF);
+// 	 #endif
+// 	}
+// }
 
 
 // ----------------------------------------------------------
@@ -457,7 +525,7 @@ void primWrapperRecParent()
 // ----------------------------------------------------------
 void primWrapperNonNP()
 {
-  primNonNP<<<1, 1>>>(noNodeTotal, d_vertexArray, d_edgeArray, d_weightArray, d_visitedArray, d_keyArray, d_levelArray, d_nodesVisited);
+  primNonNP<<<1, 32>>>(noNodeTotal, d_vertexArray, d_edgeArray, d_weightArray, d_visitedArray, d_keyArray, d_levelArray, d_nodesVisited);
   cudaErrCheck( cudaDeviceSynchronize());
   if (DEBUG)
   	printf("===> GPU Prim #%d Flat Non-NP implementation\n", config.solution);
