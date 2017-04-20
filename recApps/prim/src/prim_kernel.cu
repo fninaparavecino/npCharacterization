@@ -15,13 +15,16 @@
 #ifdef GPU_PROFILE
 // records the number of kernel calls performed
 __device__ unsigned nested_calls = 0;
+__device__ unsigned total_threads = 0;
 
 __global__ void gpu_statistics(unsigned solution){
 	printf("====> GPU #%u - number of kernel calls: %u\n",solution, nested_calls);
+	printf("====> GPU #%u - number of total threads: %u\n",solution, total_threads);
 }
 
 __global__ void reset_gpu_statistics(){
 	nested_calls = 0;
+	total_threads = 0;
 }
 #endif
 
@@ -189,11 +192,17 @@ __global__ void primRecChildren(int node, int numChildren, int* vertexArray, int
                         int* nodesVisited){
   int idx = threadIdx.x + blockIdx.x * blockDim.x;
 	#ifdef GPU_PROFILE
-  		if (threadIdx.x+blockDim.x*blockIdx.x==0) atomicInc(&nested_calls, INF);
+  		if (threadIdx.x+blockDim.x*blockIdx.x==0) {atomicInc(&nested_calls, INF);
+				atomicAdd(&total_threads, blockDim.x * gridDim.x);
+			}
   #endif
 
-  if (idx > numChildren)
-    return;
+  if (idx > numChildren){
+		#ifdef GPU_WORKEFFICIENCY
+        atomicInc(&work_efficiency, INF);
+    #endif
+		return;
+	}
 
   //update visitedArray
   if (idx == 0){
@@ -224,6 +233,9 @@ __global__ void primRecChildren(int node, int numChildren, int* vertexArray, int
   if (visitedArray[child] == false && weightArray[childId] < keyArray[child]){
     mstParent[child] = node;
     keyArray[child] = weightArray[childId];
+		#ifdef GPU_WORKEFFICIENCY
+        if (weightArray[childId] <  keyArray[child]) atomicInc(&work_efficiency, INF);
+    #endif
 
     if (child == minChild){ // only recursive call for the minChild
       int grandChildren = vertexArray[minChild+1] - vertexArray[minChild];
@@ -277,48 +289,17 @@ __global__ void primNPOpt(int numNodes, int min, int* vertexArray, int* edgeArra
                         int* weightArray, bool* visitedArray, int* keyArray, int* mstParent,
                         int* nodesVisited){
   int tid = threadIdx.x + blockIdx.x * blockDim.x;
+
   #ifdef GPU_PROFILE
   		if (threadIdx.x+blockDim.x*blockIdx.x==0) atomicInc(&nested_calls, INF);
   #endif
 
-  // //reduce to find minKey using shared memory
-  // int *sdata = SharedMemory<int>();
-  // int *sdataIndex = SharedMemory<int>();
-  //
-  // sdata[tid] = (i < numNodes) ? keyArray[i] : 0;
-  // int min = UNDEFINED;
-  // int minNode = -1;
-  // __syncthreads();
-  //
-  // // do reduction in shared mem
-  // for (unsigned int s=blockDim.x/2; s>0; s>>=1)
-  // {
-  //   if (tid < s){
-  //     if (sdata[tid] < min){
-  //       min = sdata[tid];
-  //       minNode = tid;
-  //     }
-  //     if (sdata[tid+s] < min){
-  //       min = sdata[tid+s];
-  //       minNode = tid+s;
-  //     }
-  //     sdata[tid] = min;
-  //     sdataIndex[tid] = minNode;
-  //   }
-  //   __syncthreads();
-  // }
-  //
-  // // choose min result
-  // if (tid == 0){
-  //   min = sdata[0];
-  //   minNode = sdataIndex[0];
-  //   printf("minNode %d with minKey: %d\n", minNode, min);
-  // }
   if (tid > numNodes || keyArray[tid] != min)
     return;
 
-
   if (keyArray[tid] == min){
+		printf("node source: %d\n", tid);
+
     int minNode = tid;
     min  = UNDEFINED;
     visitedArray[minNode] = true;
@@ -343,13 +324,13 @@ __global__ void primNPOpt(int numNodes, int min, int* vertexArray, int* edgeArra
 
     __syncthreads();
     if (visitedArray[0] < numNodes){
-      if (min == UNDEFINED) {// this path is not leading to any MST
+      // if (min == UNDEFINED) {// this path is not leading to any MST
         for(int i = 0; i <numNodes; i++){
           if (visitedArray[i] == false && keyArray[i] < min){
             min = keyArray[i];
           }
         }
-      }
+      // }
       // printf("Launching kernel with min: %d\n", min);
       int block_size = THREADS_PER_BLOCK;
       if (numNodes < block_size)
