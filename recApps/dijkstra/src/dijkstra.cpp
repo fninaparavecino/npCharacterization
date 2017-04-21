@@ -101,10 +101,67 @@ int parse_arguments(int argc, char** argv) {
 
 	return 1;
 }
+// A utility function to find the vertex with minimum distance value, from
+// the set of vertices not yet included in shortest path tree
 
-void dijkstraCPU(int *parent)
+int minDistance(int dist[], bool sptSet[])
 {
+   // Initialize min value
+   int min = INT_MAX, min_index;
 
+   for (int v = 0; v < noNodeTotal; v++)
+     if (sptSet[v] == false && dist[v] <= min)
+         min = dist[v], min_index = v;
+
+   return min_index;
+}
+
+// A utility function to print the constructed distance array
+int printSolution(int *dist)
+{
+   printf("Vertex   Distance from Source\n");
+   for (int i = 0; i < noNodeTotal; i++)
+      printf("%d \t\t %d\n", i, dist[i]);
+}
+void dijkstraCPU(int *dist)
+{
+  // int dist[V];     // The output array.  dist[i] will hold the shortest
+                  // distance from src to i
+
+  bool sptSet[noNodeTotal]; // sptSet[i] will true if vertex i is included in shortest
+                 // path tree or shortest distance from src to i is finalized
+
+  // Initialize all distances as INFINITE and stpSet[] as false
+  for (int i = 0; i < noNodeTotal; i++)
+    dist[i] = INT_MAX, sptSet[i] = false;
+
+  // Distance of source vertex from itself is always 0
+  dist[source] = 0;
+
+  // Find shortest path for all vertices
+  for (int count = 0; count < noNodeTotal-1; count++)
+  {
+   // Pick the minimum distance vertex from the set of vertices not
+   // yet processed. u is always equal to src in first iteration.
+   int u = minDistance(dist, sptSet);
+
+   // Mark the picked vertex as processed
+   sptSet[u] = true;
+
+   // Update dist value of the adjacent vertices of the picked vertex.
+   //for (int v = 0; v < noNodeTotal; v++)
+   for (int edgeId = graph.vertexArray[u]; edgeId < graph.vertexArray[u+1]; edgeId++)
+
+     // Update dist[v] only if is not in sptSet, there is an edge from
+     // u to v, and total weight of path from src to  v through u is
+     // smaller than current value of dist[v]
+     if (!sptSet[graph.edgeArray[edgeId]] && dist[u] != INT_MAX
+                                   && dist[u]+graph.weightArray[edgeId] < dist[graph.edgeArray[edgeId]])
+        dist[graph.edgeArray[edgeId]] = dist[u] + graph.weightArray[edgeId];
+  }
+
+  // print the constructed distance array
+  // printSolution(dist);
 }
 
 void setArrays(int size, int *arrays, int value)
@@ -170,24 +227,21 @@ int main(int argc, char* argv[])
 	}
 	printf("\n");*/
 
-  int *parentMST = (int*) malloc(sizeof(int) * noNodeTotal);
-  memset(parentMST, 0, noNodeTotal*sizeof(int));
+  int *dist = (int*) malloc(sizeof(int) * noNodeTotal);
+  memset(dist, 0, noNodeTotal*sizeof(int));
   double wall0, wall1;
   wall0 = getWallTime();
-  dijkstraCPU(parentMST);
+  dijkstraCPU(dist);
   wall1 = getWallTime();
   printf("===MAIN=== :: Dijkstra CPU performance: %.2f ms\n", wall1- wall0);
 
   // Call GPU
   setArrays(noNodeTotal, graph.levelArray, UNDEFINED);
-  setArrays(noNodeTotal, graph.keyArray, UNDEFINED);
-  graph.keyArray[source] = 0;
-  graph.levelArray[source] = -1;
+  graph.levelArray[source] = 0;
   printf("====> source: %d\n", source);
   dijkstraGPU();
 
-  //printMST(graph.levelArray);
-  validateArrays(noNodeTotal, parentMST, graph.levelArray,  "parentMST versus graph.levelArray");
+  validateArrays(noNodeTotal, dist, graph.levelArray,  "SSSP dist versus graph.levelArray");
   if (VERBOSE) {
     fprintf(stdout, "===MAIN=== :: CUDA runtime init:\t\t%.2lf ms.\n", init_time/N);
     fprintf(stdout, "===MAIN=== :: CUDA device cudaMalloc:\t\t%.2lf ms.\n", d_malloc_time/N);
